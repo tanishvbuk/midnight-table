@@ -31,6 +31,8 @@ export interface PlayOptions {
   maxSteps?: number;
   /** Probability that a bot with a pending input skips it, leaving the timer default to apply. */
   dropRate?: number;
+  /** Called with every state reached, including the first, along with the action that led to it. */
+  onState?: (state: GameState, prev: GameState, action: Action, res: ApplyResult) => void;
 }
 
 /** Plays one game of random bots to the end, checking every invariant along the way. */
@@ -50,7 +52,10 @@ export function playGame(opts: PlayOptions): GameOutcome {
     return res;
   };
   const play = (action: Action): void => {
-    state = step(action).state;
+    const prev = state;
+    const res = step(action);
+    state = res.state;
+    opts.onState?.(state, prev, action, res);
     checkViews(state, rng, failures, steps);
   };
 
