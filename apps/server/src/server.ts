@@ -51,10 +51,10 @@ export class RoomManager {
   }
 
   create(): Room {
-    let code = '';
-    do {
-      code = Array.from({ length: 4 }, () => LETTERS[randomInt(LETTERS.length)]).join('');
-    } while (this.rooms.has(code));
+    const makeCode = (): string =>
+      Array.from({ length: 4 }, () => LETTERS[randomInt(LETTERS.length)]).join('');
+    let code = makeCode();
+    while (this.rooms.has(code)) code = makeCode();
     const room = new Room({
       code,
       seed: randomInt(2 ** 31),
