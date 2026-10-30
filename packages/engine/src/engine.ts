@@ -13,6 +13,7 @@ import type {
   PlayerId,
   PlayerState,
   Preset,
+  Question,
   Role,
   Winner,
 } from './types';
@@ -40,6 +41,7 @@ export function createGame(options: CreateGameOptions): GameState {
   };
   return {
     rng: options.seed >>> 0,
+    asked: [],
     epoch: 0,
     config,
     preset: null,
@@ -300,10 +302,15 @@ function startMission(c: Ctx): void {
   const { s } = c;
   s.day++;
   for (const p of s.players) p.shield = false;
-  const questions = c.rng
-    .shuffle(QUESTION_BANK)
-    .slice(0, s.config.questionsPerMission)
-    .map((q) => structuredClone(q));
+  const want = s.config.questionsPerMission;
+  let fresh = QUESTION_BANK.map((_, i) => i).filter((i) => !s.asked.includes(i));
+  if (fresh.length < want) {
+    s.asked = []; // the bank is used up: start over
+    fresh = QUESTION_BANK.map((_, i) => i);
+  }
+  const picked = c.rng.shuffle(fresh).slice(0, want);
+  s.asked.push(...picked);
+  const questions = picked.map((i) => structuredClone(QUESTION_BANK[i] as Question));
   enter(c, { kind: 'mission', questions, answers: {} });
 }
 

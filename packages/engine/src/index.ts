@@ -1,7 +1,7 @@
 export * from './types';
 export * from './presets';
 export * from './rng';
-export { QUESTION_BANK } from './questions';
+export { QUESTION_BANK, QUESTION_SETS } from './questions';
 export {
   apply,
   createGame,

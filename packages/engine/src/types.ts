@@ -119,6 +119,8 @@ export interface GameResult {
 
 export interface GameState {
   rng: number;
+  /** Indices into the question bank already used this game, so missions do not repeat. Never in a view. */
+  asked: number[];
   /** Timer epoch: bumps on every phase change and every sub-step. A stale timeout is ignored. */
   epoch: number;
   config: Config;
