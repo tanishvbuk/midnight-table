@@ -137,6 +137,8 @@ export interface GameState {
   notes: Note[];
   /** Events kept for the post-game replay (R27). Never in a view before the final reveal. */
   history: GameEvent[];
+  /** Ghost guesses (R26): ghost id -> players they think are Traitors. Private to the ghost until the final reveal. */
+  predictions: Record<PlayerId, PlayerId[]>;
   result: GameResult | null;
 }
 
@@ -152,6 +154,8 @@ export type Action =
   | { type: 'nightPick'; actor: PlayerId; target: PlayerId }
   | { type: 'nightNote'; actor: PlayerId; text: string }
   | { type: 'recruitReply'; actor: PlayerId; accept: boolean }
+  /** Ghosts only: replaces the ghost's guess at who the Traitors are. Has no effect on the game. */
+  | { type: 'predict'; actor: PlayerId; suspects: PlayerId[] }
   | { type: 'timeout'; epoch: number }
   /** Host escape hatch (server-authenticated): clears the ballots of the current vote and reopens it. */
   | { type: 'rerunVote' }

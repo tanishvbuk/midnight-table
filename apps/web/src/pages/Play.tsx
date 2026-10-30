@@ -289,6 +289,7 @@ function RecruitOffer({ you, act }: Ctx) {
 function Final({ you, v }: Ctx) {
   const [replay, setReplay] = useState(false);
   const ph = v.phase as PhaseOf<'finalReveal'>;
+  const nameOf = (id: string) => v.players.find((p) => p.id === id)?.name ?? '?';
   const won =
     ph.roles[you.id] === (ph.winner === 'traitors' ? 'traitor' : 'faithful') &&
     (ph.payouts[you.id] ?? -1) >= 0;
@@ -306,6 +307,20 @@ function Final({ you, v }: Ctx) {
           ))}
         </tbody>
       </table>
+      {ph.predictions.length > 0 && (
+        <>
+          <h3>Ghost guesses</h3>
+          <ul className="muted">
+            {ph.predictions.map((g) => (
+              <li key={g.ghost}>
+                {nameOf(g.ghost)}:{' '}
+                {g.suspects.length ? g.suspects.map(nameOf).join(', ') : 'no guess'} ({g.hits}{' '}
+                right)
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       <button className="ghost" onClick={() => setReplay((r) => !r)}>
         {replay ? 'Hide the replay' : 'Replay the game'}
       </button>
@@ -396,6 +411,38 @@ function Public({ ctx, text }: { ctx: Ctx; text: string }) {
   return <div className="public-feed">{phasePanel(pv, byId)}</div>;
 }
 
+/** R26: a ghost's private guess at the Traitors. It changes nothing in the game. */
+function Guess({ you, v, act }: Ctx) {
+  const options = v.players.filter((p) => p.id !== you.id && p.fate === 'alive');
+  const full = you.prediction.length >= you.predictionLimit;
+  const toggle = (id: string) => {
+    const has = you.prediction.includes(id);
+    if (!has && full) return;
+    act({
+      type: 'predict',
+      suspects: has ? you.prediction.filter((x) => x !== id) : [...you.prediction, id],
+    });
+  };
+  return (
+    <Panel title="Who are the Traitors?">
+      <p className="muted">
+        Your private guess, up to {you.predictionLimit}. Nobody sees it until the end, when it is
+        scored.
+      </p>
+      <div className="chips">
+        {options.map((p) => (
+          <PlayerChip
+            key={p.id}
+            p={p}
+            selected={you.prediction.includes(p.id)}
+            onClick={() => toggle(p.id)}
+          />
+        ))}
+      </div>
+    </Panel>
+  );
+}
+
 function Body(ctx: Ctx) {
   const { v, you } = ctx;
   if (!you.alive && v.phase.kind !== 'finalReveal' && v.phase.kind !== 'lobby') {
@@ -403,8 +450,13 @@ function Body(ctx: Ctx) {
     return (
       <>
         <Panel title="You are a ghost">
-          <p>You can no longer act. Watch the castle and keep the secret of what you saw.</p>
+          <p>
+            You can no longer act in the game.{' '}
+            {ctx.s.phonesOnly ? 'Follow the table here' : 'Watch the castle'} and keep the secret of
+            what you saw.
+          </p>
         </Panel>
+        <Guess {...ctx} />
         {publicPhase && ctx.s.publicView && <Public ctx={ctx} text="" />}
       </>
     );

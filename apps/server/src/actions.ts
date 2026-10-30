@@ -34,6 +34,10 @@ export function parsePlayerAction(raw: Record<string, unknown>, actor: PlayerId)
     case 'recruitReply':
       if (typeof raw.accept !== 'boolean') return null;
       return { type: 'recruitReply', actor, accept: raw.accept };
+    case 'predict':
+      if (!Array.isArray(raw.suspects) || raw.suspects.length > 16) return null;
+      if (!raw.suspects.every((x) => isStr(x))) return null;
+      return { type: 'predict', actor, suspects: raw.suspects as string[] };
     default:
       return null;
   }

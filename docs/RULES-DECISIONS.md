@@ -117,7 +117,6 @@ bots (R22) belong to the server work in M2. The simulator's bots are in `package
   everything private reaches a phone only as its own view.
 - **Night screen.** Every phone renders the same night layout. The notes panel shows the Traitor chat
   for Traitors and the private journal for everyone else.
-- **Ghost predictions (R26)** is a Should item and is not built.
 
 ## M4: phones-only mode (R24)
 
@@ -171,3 +170,24 @@ bots (R22) belong to the server work in M2. The simulator's bots are in `package
 - **Not in it.** Who each Traitor picked at night (only the outcome is shown), quiz answers, and
   who held a Shield but was never targeted.
 - **Open.** Whether the 3 s pace and the amount of detail suit a real table is a playtest question.
+
+## M4: ghost predictions (R26)
+
+Agreed with the project owner before building.
+
+- **What a ghost predicts.** Who the Traitors are: up to as many players as the game started with
+  Traitors (`YouView.predictionLimit`), chosen from the living players, replaceable at any time
+  while the game runs. Action `predict { suspects }`.
+- **No effect on play.** Nothing in the rules reads a prediction, and a test checks a prediction
+  leaves the RNG and phase untouched. It is the one action a dead player may take; the "eliminated
+  players can't act" invariant carves out `predict` only, and the simulator throws bad `predict`
+  actions at the engine (self, duplicates, living players).
+- **Privacy.** A guess is visible only to its ghost (`you.prediction`); the living and the castle
+  always get an empty list. Everyone sees all guesses and how many were right, once, in the final
+  reveal (`predictions` with `hits`). Ghosts still see nothing new (no roles, team or chat).
+- **Scoring.** `hits` = suspects who were Traitors by the end, recruits included. It is not part of
+  the payout.
+- **Phones.** The ghost card now has a chip picker, and says "Follow the table here" instead of
+  "Watch the castle" in phones-only mode.
+- **Open.** Only the guess at the end is scored; nobody has tried this with real people. Whether
+  ghosts use it, and whether a result line at the end is enough reward, is a playtest question.

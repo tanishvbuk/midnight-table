@@ -45,7 +45,16 @@ export type PhaseView =
       roles: Record<PlayerId, Role>;
       /** The replay (R27). Present only now, because it names every role. */
       timeline: TimelineEntry[];
+      /** How each ghost's guess at the Traitors turned out. Present only now. */
+      predictions: PredictionResult[];
     };
+
+export interface PredictionResult {
+  ghost: PlayerId;
+  suspects: PlayerId[];
+  /** Suspects who really were Traitors. */
+  hits: number;
+}
 
 /** What the "Show my card" button displays. Identical for every player, whatever their role. */
 export const SHOWN_CARD = { role: 'faithful' } as const;
@@ -73,6 +82,10 @@ export interface YouView {
   offer: { ultimatum: boolean } | null;
   /** Traitors only: last night's murder failed. */
   murderFailed: boolean;
+  /** Ghosts only: your own guess at the Traitors. Always empty for the living. */
+  prediction: PlayerId[];
+  /** Ghosts only: how many Traitors the game started with, which caps a guess. 0 for the living. */
+  predictionLimit: number;
 }
 
 export interface GameView {
@@ -149,6 +162,11 @@ function phaseView(s: GameState): PhaseView {
         payouts: { ...(result?.payouts ?? {}) },
         roles,
         timeline: buildTimeline(s),
+        predictions: Object.entries(s.predictions).map(([ghost, suspects]) => ({
+          ghost,
+          suspects: [...suspects],
+          hits: suspects.filter((x) => roles[x] === 'traitor').length,
+        })),
       };
     }
   }
@@ -188,6 +206,8 @@ function youView(s: GameState, id: PlayerId): YouView | null {
           .map((n) => ({ author: n.author, night: n.night, text: n.text }))
       : [],
     offer: null,
+    predictionLimit: alive ? 0 : s.initialTraitors,
+    prediction: alive ? [] : [...(s.predictions[id] ?? [])],
     murderFailed: traitor && p.kind === 'breakfast' && p.announced && p.murderFailed,
   };
   if (!alive) return view;

@@ -72,6 +72,7 @@ export function playGame(opts: PlayOptions): GameOutcome {
       const action = botAction(state, actor, rng);
       if (action) play(action);
     }
+    ghostGuesses(state, rng, play);
     injectNoise(state, rng, step);
     if (state.epoch === epoch) play({ type: 'timeout', epoch });
   }
@@ -87,6 +88,20 @@ export function playGame(opts: PlayOptions): GameOutcome {
     pot: state.pot,
     failures,
   };
+}
+
+/** Ghosts occasionally change their R26 guess. It must never change the course of the game. */
+function ghostGuesses(s: GameState, rng: Rng, play: (a: Action) => void): void {
+  for (const g of s.players.filter((p) => p.fate !== 'alive')) {
+    if (rng.next() > 0.3) continue;
+    const others = s.players.filter((p) => p.id !== g.id);
+    const suspects: PlayerId[] = [];
+    for (let i = rng.int(s.initialTraitors + 1); i > 0; i--) {
+      const pick = rng.pick(others).id;
+      if (!suspects.includes(pick)) suspects.push(pick);
+    }
+    play({ type: 'predict', actor: g.id, suspects });
+  }
 }
 
 /** Throws illegal actions at the engine; every one must be rejected with no change. */
@@ -114,8 +129,11 @@ function injectNoise(s: GameState, rng: Rng, step: (a: Action) => ApplyResult): 
       { type: 'endgameVote', actor: d, choice: 'end' },
       { type: 'recruitReply', actor: d, accept: true },
       { type: 'submitAnswers', actor: d, answers: [] },
+      { type: 'predict', actor: d, suspects: [d] },
+      { type: 'predict', actor: d, suspects: [target, target] },
     );
   }
+  candidates.push({ type: 'predict', actor: anyone.id, suspects: [] });
   step(rng.pick(candidates));
 }
 

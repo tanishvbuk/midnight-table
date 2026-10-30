@@ -93,6 +93,10 @@ export function viewProblems(s: GameState, viewer: Viewer): string[] {
   if (!alive && (you.shield || you.clues.length || you.chat.length || you.journal.length)) {
     fail('ghost sees private information');
   }
+  if (alive && you.prediction.length > 0) fail('living player has a prediction');
+  if (!alive && JSON.stringify(you.prediction) !== JSON.stringify(s.predictions[viewer] ?? [])) {
+    fail("prediction is not the ghost's own");
+  }
   return problems;
 }
 
@@ -105,13 +109,18 @@ export class InvariantTracker {
     const out: string[] = [];
     const fail = (m: string): void => void out.push(m);
     const next = res.state;
+    if (action.type === 'predict' && res.error === undefined) {
+      const rest = (st: GameState) => ({ ...st, predictions: null });
+      if (JSON.stringify(rest(prev)) !== JSON.stringify(rest(next)))
+        fail('prediction changed the game');
+    }
 
     if (res.error !== undefined) {
       if (next !== prev) fail('rejected action returned a different state');
       if (res.events.length > 0) fail('rejected action produced events');
       return out;
     }
-    if ('actor' in action) {
+    if ('actor' in action && action.type !== 'predict') {
       const actor = prev.players.find((p) => p.id === action.actor);
       if (actor && actor.fate !== 'alive')
         fail(`eliminated player ${actor.id} acted: ${action.type}`);

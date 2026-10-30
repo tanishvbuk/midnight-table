@@ -305,3 +305,31 @@ describe('room: phones-only mode (R24)', () => {
     expect(last(c)).toMatchObject({ phonesOnly: true });
   });
 });
+
+describe('room: ghost predictions (R26)', () => {
+  it('lets a ghost guess over the wire, and keeps it private', () => {
+    const { room } = setup(5);
+    const clients = ['A', 'B', 'C', 'D'].map((n) => {
+      const j = room.join(n, null);
+      if (typeof j === 'string') throw new Error(j);
+      const c = new FakeClient();
+      room.connectPlayer(j.token, c);
+      return { j, c };
+    });
+    expect(room.act(clients[0].j.playerId, { type: 'start' })).toBeNull();
+    const [a, b] = clients;
+    expect(room.act(a.j.playerId, { type: 'predict', suspects: [b.j.playerId] })).toMatch(/ghost/i);
+    const ghost = room.state.players[3];
+    if (!ghost) throw new Error('no player');
+    ghost.fate = 'banished';
+    const suspect = room.state.players[1]?.id as string;
+    expect(room.act(ghost.id, { type: 'predict', suspects: [suspect] })).toBeNull();
+    expect(room.act(ghost.id, { type: 'predict', suspects: 'x' })).toBe('Invalid action.');
+    const mine = clients[3].c.last?.view.you?.prediction;
+    expect(mine).toEqual([suspect]);
+    for (const other of clients.slice(0, 3)) {
+      expect(other.c.last?.view.you?.prediction).toEqual([]);
+      expect(JSON.stringify(other.c.last)).not.toContain(`"prediction":["${suspect}"]`);
+    }
+  });
+});

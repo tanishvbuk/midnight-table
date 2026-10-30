@@ -177,7 +177,7 @@ The priorities are Must, Should, Could and Won't. v1 is every Must and nothing e
 | R23 | Testing | A command-line simulator that runs thousands of bot games. | Must |
 | R24 | Castle | Phones-only mode: if no castle joins, public events show on every phone. | Should |
 | R25 | Mission | Physical mission cards, with a group pass or fail vote. | Should |
-| R26 | Ghosts | Ghost view with predictions. | Should |
+| R26 | Ghosts | Ghost view with predictions: a private guess at who the Traitors are, scored at the end. | Should |
 | R27 | Post-game | Replay timeline of every murder, vote, recruitment and Shield, plus the Traitor chat and Faithful notes. | Should |
 | R28 | Twists | Seer, Dagger, Secret Traitor and no-murder nights. | Could |
 | R29 | Castle | Voice narration and music. | Could |

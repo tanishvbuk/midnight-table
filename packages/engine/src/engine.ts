@@ -56,6 +56,7 @@ export function createGame(options: CreateGameOptions): GameState {
     phase: { kind: 'lobby' },
     notes: [],
     history: [],
+    predictions: {},
     result: null,
   };
 }
@@ -184,6 +185,7 @@ function handle(c: Ctx, a: Action): void {
   }
   const actor = getPlayer(s, a.actor);
   if (!actor) reject('unknown player');
+  if (a.type === 'predict') return predict(c, actor, a.suspects);
   if (actor.fate !== 'alive') reject('eliminated players cannot act');
   switch (a.type) {
     case 'ackRole':
@@ -203,6 +205,20 @@ function handle(c: Ctx, a: Action): void {
     case 'recruitReply':
       return recruitReply(c, a.actor, a.accept);
   }
+}
+
+/** R26: the one thing a ghost may do. Private, replaceable, and never read by any rule. */
+function predict(c: Ctx, actor: PlayerState, suspects: PlayerId[]): void {
+  const { s } = c;
+  if (actor.fate === 'alive') reject('only ghosts predict');
+  if (s.phase.kind === 'lobby' || s.phase.kind === 'finalReveal') reject('no game in progress');
+  if (!Array.isArray(suspects)) reject('bad prediction');
+  if (new Set(suspects).size !== suspects.length) reject('duplicate suspect');
+  if (suspects.length > s.initialTraitors) reject('more suspects than Traitors');
+  for (const id of suspects) {
+    if (id === actor.id || !getPlayer(s, id)) reject('bad suspect');
+  }
+  s.predictions[actor.id] = [...suspects];
 }
 
 function onTimeout(c: Ctx): void {

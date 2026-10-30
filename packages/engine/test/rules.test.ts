@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   apply,
+  type Action,
   presetFor,
   view,
   type GameEvent,
@@ -718,5 +719,50 @@ describe('host escape hatch actions', () => {
     expect(r.state.phase.kind).toBe('finalReveal');
     expect(r.state.result).toEqual({ winner: 'traitors', pot: 500, payouts: { p2: 500 } });
     expect(apply(lobby(5), { type: 'endGame' }).error).toBeDefined();
+  });
+});
+
+describe('ghost predictions (R26)', () => {
+  const ghosted = () => kill(withRoles(started(8), ['p2', 'p5']), ['p3'], 'murdered');
+
+  it('lets a ghost set and replace a private guess, and nobody else sees it', () => {
+    let s = ghosted();
+    s = ok(s, { type: 'predict', actor: 'p3', suspects: ['p2'] }).state;
+    s = ok(s, { type: 'predict', actor: 'p3', suspects: ['p5', 'p1'] }).state;
+    expect(view(s, 'p3').you?.prediction).toEqual(['p5', 'p1']);
+    for (const viewer of ['castle', 'p1', 'p2', 'p4'] as const) {
+      expect(JSON.stringify(view(s, viewer))).not.toContain('"predictions"');
+      expect(view(s, viewer).you?.prediction ?? []).toEqual([]);
+    }
+  });
+
+  it('rejects living players, bad suspects and too many suspects, changing nothing', () => {
+    const s = ghosted();
+    const bad: Action[] = [
+      { type: 'predict', actor: 'p1', suspects: ['p2'] },
+      { type: 'predict', actor: 'p3', suspects: ['p3'] },
+      { type: 'predict', actor: 'p3', suspects: ['nobody'] },
+      { type: 'predict', actor: 'p3', suspects: ['p2', 'p2'] },
+      { type: 'predict', actor: 'p3', suspects: ['p1', 'p2', 'p4'] },
+    ];
+    for (const a of bad) {
+      const r = apply(s, a);
+      expect(r.error).toBeDefined();
+      expect(r.state).toBe(s);
+    }
+  });
+
+  it('never changes the game, and is scored in the final reveal only', () => {
+    const base = ghosted();
+    const guessed = ok(base, { type: 'predict', actor: 'p3', suspects: ['p2', 'p1'] }).state;
+    expect(tick(guessed).state.rng).toBe(tick(base).state.rng);
+    expect(tick(guessed).state.phase).toEqual(tick(base).state.phase);
+
+    const end = ok(guessed, { type: 'endGame' }).state;
+    const ph = view(end, 'p1').phase;
+    expect(ph.kind === 'finalReveal' && ph.predictions).toEqual([
+      { ghost: 'p3', suspects: ['p2', 'p1'], hits: 1 },
+    ]);
+    expect(apply(end, { type: 'predict', actor: 'p3', suspects: [] }).error).toBeDefined();
   });
 });
