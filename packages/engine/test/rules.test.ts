@@ -685,3 +685,38 @@ describe('determinism', () => {
     expect(play()).toEqual(play());
   });
 });
+
+describe('host escape hatch actions', () => {
+  it('re-runs the current vote with clean ballots', () => {
+    let s = at(started(6), {
+      kind: 'voting',
+      stage: 'main',
+      candidates: ids(6),
+      eligible: ids(6),
+      votes: {},
+    });
+    s = ok(s, { type: 'vote', actor: 'p1', target: 'p2' }).state;
+    const r = ok(s, { type: 'rerunVote' });
+    expect(r.state.phase).toMatchObject({ kind: 'voting', votes: {} });
+    expect(r.state.epoch).toBeGreaterThan(s.epoch);
+    let rev = everyone(r.state, (a) => ({
+      type: 'vote',
+      actor: a,
+      target: a === 'p1' ? 'p2' : 'p1',
+    }));
+    expect(rev.phase.kind).toBe('voteReveal');
+    rev = ok(rev, { type: 'rerunVote' }).state;
+    expect(rev.phase).toMatchObject({ kind: 'voting', votes: {} });
+    expect(apply(started(6), { type: 'rerunVote' }).error).toBeDefined();
+  });
+
+  it('ends the game on demand with the usual payout', () => {
+    const s = patch(at(withRoles(started(6), ['p2']), { kind: 'discussion', ready: [] }), (d) => {
+      d.pot = 500;
+    });
+    const r = ok(s, { type: 'endGame' });
+    expect(r.state.phase.kind).toBe('finalReveal');
+    expect(r.state.result).toEqual({ winner: 'traitors', pot: 500, payouts: { p2: 500 } });
+    expect(apply(lobby(5), { type: 'endGame' }).error).toBeDefined();
+  });
+});

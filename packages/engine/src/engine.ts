@@ -19,6 +19,7 @@ import type {
 
 const MAX_NAME = 24;
 const MAX_NOTE = 200;
+const MAX_AVATAR = 80_000;
 const MAX_NOTES_PER_NIGHT = 20;
 
 export interface CreateGameOptions {
@@ -163,6 +164,11 @@ function handle(c: Ctx, a: Action): void {
     case 'timeout':
       if (a.epoch !== s.epoch) reject('stale timeout');
       return onTimeout(c);
+    case 'rerunVote':
+      return rerunVote(c);
+    case 'endGame':
+      if (s.phase.kind === 'lobby' || s.phase.kind === 'finalReveal') reject('no game to end');
+      return finish(c);
     default:
       break;
   }
@@ -227,6 +233,7 @@ function join(c: Ctx, a: Extract<Action, { type: 'join' }>): void {
   if (s.players.some((p) => p.id === a.id)) reject('already joined');
   const name = a.name.trim();
   if (name.length < 1 || name.length > MAX_NAME) reject('invalid name');
+  if (a.avatar && a.avatar.length > MAX_AVATAR) reject('avatar too large');
   s.players.push({
     id: a.id,
     name,
@@ -404,6 +411,25 @@ function castVote(c: Ctx, actor: PlayerId, target: PlayerId | null): void {
   }
   p.votes[actor] = target;
   if (p.eligible.every((id) => id in p.votes)) closeVoting(c);
+}
+
+function rerunVote(c: Ctx): void {
+  const p = c.s.phase;
+  if (p.kind === 'voting') {
+    enter(c, { ...p, votes: {} });
+  } else if (p.kind === 'voteReveal') {
+    enter(c, {
+      kind: 'voting',
+      stage: p.stage,
+      candidates: p.candidates,
+      eligible: [...p.order],
+      votes: {},
+    });
+  } else if (p.kind === 'endgameVote') {
+    enter(c, { kind: 'endgameVote', votes: {} });
+  } else {
+    reject('no vote to re-run');
+  }
 }
 
 function closeVoting(c: Ctx): void {

@@ -15,4 +15,5 @@ export {
   type CreateGameOptions,
 } from './engine';
 export * from './view';
+export { narrate } from './narration';
 export { InvariantTracker, viewProblems, allViewers } from './invariants';

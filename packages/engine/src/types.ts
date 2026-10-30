@@ -148,7 +148,11 @@ export type Action =
   | { type: 'nightPick'; actor: PlayerId; target: PlayerId }
   | { type: 'nightNote'; actor: PlayerId; text: string }
   | { type: 'recruitReply'; actor: PlayerId; accept: boolean }
-  | { type: 'timeout'; epoch: number };
+  | { type: 'timeout'; epoch: number }
+  /** Host escape hatch (server-authenticated): clears the ballots of the current vote and reopens it. */
+  | { type: 'rerunVote' }
+  /** Host escape hatch (server-authenticated): ends the game now with the usual payout. */
+  | { type: 'endGame' };
 
 export type Audience = 'public' | { players: PlayerId[] };
 
