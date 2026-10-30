@@ -1,5 +1,6 @@
 import { DEFAULT_CONFIG, MAX_PLAYERS, MIN_PLAYERS, NIGHT_MS, presetFor } from './presets';
 import { QUESTION_BANK } from './questions';
+import { HISTORY_EVENTS } from './timeline';
 import { rngOver, type Rng } from './rng';
 import type {
   Action,
@@ -54,6 +55,7 @@ export function createGame(options: CreateGameOptions): GameState {
     recruitPending: false,
     phase: { kind: 'lobby' },
     notes: [],
+    history: [],
     result: null,
   };
 }
@@ -127,7 +129,9 @@ export function inEndgame(s: GameState): boolean {
 // ---------------------------------------------------------------- plumbing
 
 function emit(c: Ctx, body: EventBody, audience: Audience = 'public'): void {
-  c.events.push({ ...body, audience } as GameEvent);
+  const event = { ...body, audience } as GameEvent;
+  c.events.push(event);
+  if (HISTORY_EVENTS.has(event.type)) c.s.history.push(event);
 }
 
 function bump(c: Ctx): void {

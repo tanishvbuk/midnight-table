@@ -9,7 +9,7 @@ import {
   usePublicOrigin,
   type Connection,
 } from '../net';
-import { Countdown, Notices, Panel, PlayerChip, go } from '../ui';
+import { Countdown, Notices, Panel, PlayerChip, Replay, go } from '../ui';
 import { phasePanel } from './Castle';
 
 type PhaseOf<K extends GameView['phase']['kind']> = Extract<GameView['phase'], { kind: K }>;
@@ -287,6 +287,7 @@ function RecruitOffer({ you, act }: Ctx) {
 }
 
 function Final({ you, v }: Ctx) {
+  const [replay, setReplay] = useState(false);
   const ph = v.phase as PhaseOf<'finalReveal'>;
   const won =
     ph.roles[you.id] === (ph.winner === 'traitors' ? 'traitor' : 'faithful') &&
@@ -305,6 +306,10 @@ function Final({ you, v }: Ctx) {
           ))}
         </tbody>
       </table>
+      <button className="ghost" onClick={() => setReplay((r) => !r)}>
+        {replay ? 'Hide the replay' : 'Replay the game'}
+      </button>
+      {replay && <Replay timeline={ph.timeline} />}
     </Panel>
   );
 }

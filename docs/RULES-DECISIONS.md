@@ -117,7 +117,7 @@ bots (R22) belong to the server work in M2. The simulator's bots are in `package
   everything private reaches a phone only as its own view.
 - **Night screen.** Every phone renders the same night layout. The notes panel shows the Traitor chat
   for Traitors and the private journal for everyone else.
-- **Ghost predictions (R26) and replay (R27)** are Should items and are not built.
+- **Ghost predictions (R26)** is a Should item and is not built.
 
 ## M4: phones-only mode (R24)
 
@@ -157,3 +157,17 @@ bots (R22) belong to the server work in M2. The simulator's bots are in `package
   every role; only the contents of the notes list differ, as before.
 - **Not exposed in the UI.** Timers and the role-reveal setting are engine config only. The spec
   says the creator can adjust timers; there is no screen for that yet.
+
+## M4: replay (R27)
+
+- **What is recorded.** `GameState.history` keeps the events the replay needs (votes, run-offs,
+  banishments, murders and failed murders, Shields and clues, recruitment steps, endgame votes and
+  notes). It is rebuilt exactly when a room is restored from its log, and it is never in a view
+  before the final reveal.
+- **What is shown.** The final-reveal view carries `timeline`: plain lines grouped by "Day N" or
+  "Night N". It is the same for every viewer, because by then every role is public. It names each
+  banished player's role. A phone gets a "Replay the game" button; the castle plays it one line
+  every 3 seconds under the final table.
+- **Not in it.** Who each Traitor picked at night (only the outcome is shown), quiz answers, and
+  who held a Shield but was never targeted.
+- **Open.** Whether the 3 s pace and the amount of detail suit a real table is a playtest question.

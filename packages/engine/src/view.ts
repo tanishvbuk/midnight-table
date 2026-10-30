@@ -1,4 +1,5 @@
 import { alivePlayers, getPlayer, readyThreshold, timerMs } from './engine';
+import { buildTimeline, type TimelineEntry } from './timeline';
 import type { Fate, GameState, PlayerId, Role, VoteStage, Winner } from './types';
 
 export type Viewer = 'castle' | PlayerId;
@@ -42,6 +43,8 @@ export type PhaseView =
       pot: number;
       payouts: Record<PlayerId, number>;
       roles: Record<PlayerId, Role>;
+      /** The replay (R27). Present only now, because it names every role. */
+      timeline: TimelineEntry[];
     };
 
 /** What the "Show my card" button displays. Identical for every player, whatever their role. */
@@ -145,6 +148,7 @@ function phaseView(s: GameState): PhaseView {
         pot: result?.pot ?? 0,
         payouts: { ...(result?.payouts ?? {}) },
         roles,
+        timeline: buildTimeline(s),
       };
     }
   }

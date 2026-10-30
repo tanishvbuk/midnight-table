@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import type { GameView, PublicPlayer } from '@midnight/engine';
 import { usePublicOrigin, useGame } from '../net';
-import { Countdown, Notices, Portrait } from '../ui';
+import { Countdown, Notices, Portrait, Replay } from '../ui';
 
 const tv = (): boolean => window.innerWidth >= 1400;
 
@@ -209,18 +209,21 @@ export function phasePanel(v: GameView, byId: Map<string, PublicPlayer>) {
       return <NightSky />;
     case 'finalReveal':
       return (
-        <table className="final">
-          <tbody>
-            {v.players.map((p) => (
-              <tr key={p.id}>
-                <td>{p.name}</td>
-                <td className={`role-${ph.roles[p.id]}`}>{ph.roles[p.id]}</td>
-                <td>{p.fate}</td>
-                <td>{ph.payouts[p.id] ?? 0}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <>
+          <table className="final">
+            <tbody>
+              {v.players.map((p) => (
+                <tr key={p.id}>
+                  <td>{p.name}</td>
+                  <td className={`role-${ph.roles[p.id]}`}>{ph.roles[p.id]}</td>
+                  <td>{p.fate}</td>
+                  <td>{ph.payouts[p.id] ?? 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <Replay timeline={ph.timeline} live />
+        </>
       );
     default:
       return null;

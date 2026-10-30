@@ -135,6 +135,8 @@ export interface GameState {
   recruitPending: boolean;
   phase: Phase;
   notes: Note[];
+  /** Events kept for the post-game replay (R27). Never in a view before the final reveal. */
+  history: GameEvent[];
   result: GameResult | null;
 }
 

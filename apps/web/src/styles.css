@@ -613,3 +613,30 @@ button.danger {
     animation: none;
   }
 }
+
+.replay {
+  text-align: left;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+.replay h3 {
+  margin: 0.8em 0 0.2em;
+  color: var(--gold, #d9b45a);
+  font-size: 0.9em;
+}
+.replay-line {
+  margin: 0.15em 0;
+  font-size: 0.95em;
+}
+.replay-banish,
+.replay-murder {
+  color: #e08a8a;
+}
+.replay-note {
+  font-style: italic;
+  opacity: 0.8;
+}
+.castle .replay {
+  max-height: 32vh;
+  font-size: 1.4rem;
+}

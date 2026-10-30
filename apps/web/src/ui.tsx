@@ -1,5 +1,5 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import type { PublicPlayer } from '@midnight/engine';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import type { PublicPlayer, TimelineEntry } from '@midnight/engine';
 import type { Connection } from './net';
 
 export function hue(name: string): number {
@@ -95,4 +95,37 @@ export async function resizeImage(file: File, size = 128): Promise<string> {
   if (!ctx) throw new Error('no canvas');
   ctx.drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, size, size);
   return canvas.toDataURL('image/jpeg', 0.7);
+}
+
+/** The post-game replay (R27). `live` reveals one line at a time, for the castle. */
+export function Replay({ timeline, live = false }: { timeline: TimelineEntry[]; live?: boolean }) {
+  const [shown, setShown] = useState(live ? Math.min(1, timeline.length) : timeline.length);
+  useEffect(() => {
+    if (!live) return;
+    const t = setInterval(() => setShown((n) => Math.min(timeline.length, n + 1)), 3000);
+    return () => clearInterval(t);
+  }, [live, timeline.length]);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (live && box.current) box.current.scrollTop = box.current.scrollHeight;
+  }, [live, shown]);
+  const lines = timeline.slice(0, shown);
+  const rows: ReactNode[] = [];
+  let when = '';
+  lines.forEach((e, i) => {
+    if (e.when !== when) {
+      when = e.when;
+      rows.push(<h3 key={`w${i}`}>{when}</h3>);
+    }
+    rows.push(
+      <p key={i} className={`replay-line replay-${e.kind}`}>
+        {e.text}
+      </p>,
+    );
+  });
+  return (
+    <div className="replay" ref={box}>
+      {rows.length === 0 ? <p className="muted">The replay is about to start…</p> : rows}
+    </div>
+  );
 }

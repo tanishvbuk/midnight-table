@@ -100,6 +100,8 @@ Then the open questions from the spec, one per game so the debrief stays short:
 - Game 2: should roles stop being revealed on banishment once the endgame starts? (The engine
   has the setting, `revealRoles: 'until-endgame'`; it is not exposed in the UI or the server's
   environment yet, so this is a question to ask, not something to toggle on the night.)
+- After every game: did anyone open the replay, and did the castle's line-by-line replay hold the
+  room or empty it? Was anything in it wrong or missing?
 - Game 3: selfies or emoji avatars? Would a phones-only mode have been useful for the small game?
 
 ## Bug log

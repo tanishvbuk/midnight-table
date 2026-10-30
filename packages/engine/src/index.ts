@@ -16,6 +16,7 @@ export {
   type CreateGameOptions,
 } from './engine';
 export * from './view';
+export { buildTimeline, type TimelineEntry } from './timeline';
 export { narrate } from './narration';
 export * from './protocol';
 export { InvariantTracker, viewProblems, allViewers } from './invariants';
