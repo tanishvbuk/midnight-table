@@ -22,9 +22,13 @@ const MAX_NOTE = 200;
 const MAX_AVATAR = 80_000;
 const MAX_NOTES_PER_NIGHT = 20;
 
+export type ConfigOverrides = Partial<Omit<Config, 'timers'>> & {
+  timers?: Partial<Config['timers']>;
+};
+
 export interface CreateGameOptions {
   seed: number;
-  config?: Partial<Omit<Config, 'timers'>> & { timers?: Partial<Config['timers']> };
+  config?: ConfigOverrides;
 }
 
 export function createGame(options: CreateGameOptions): GameState {
