@@ -12,7 +12,11 @@
     "format": "prettier --write .",
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "vitest run",
-    "sim": "tsx packages/sim/src/cli.ts"
+    "sim": "tsx packages/sim/src/cli.ts",
+    "build": "pnpm --filter @midnight/web build",
+    "start": "pnpm build && pnpm --filter @midnight/server start",
+    "dev:server": "pnpm --filter @midnight/server dev",
+    "dev:web": "pnpm --filter @midnight/web dev"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

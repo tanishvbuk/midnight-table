@@ -16,4 +16,5 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      - run: pnpm build
       - run: pnpm sim --games 500 --players 4-16 --seed 1

@@ -9,6 +9,9 @@ const server = createServer({
   dataDir: resolve(process.env.DATA_DIR ?? 'data/rooms'),
   webDir: existsSync(webDir) ? webDir : undefined,
   timeScale: Number(process.env.TIME_SCALE ?? 1),
+  botDelayMs: process.env.BOT_DELAY_MS
+    ? (process.env.BOT_DELAY_MS.split(',').map(Number) as [number, number])
+    : undefined,
 });
 server.listen().then((p) => {
   console.log(

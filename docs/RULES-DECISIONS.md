@@ -92,3 +92,29 @@ should be reviewed.
 
 The escape-hatch actions (R21), device tokens and rejoin (R3), narration text (R20), and server-side
 bots (R22) belong to the server work in M2. The simulator's bots are in `packages/sim`.
+
+## M2: server and clients
+
+- **Escape hatch.** Pause/resume, +60 s, re-run vote, drop player and end game are host-only and
+  each use is announced to every screen as a notice. `rerunVote` and `endGame` are engine actions
+  (no actor; the server authenticates the host). Re-running clears ballots and restarts the same
+  vote, including from the reveal step. Pausing also blocks player actions and bots.
+- **Dropping a player** in the lobby removes them. In a game it hands their seat to autopilot (the
+  same random-legal-action bot used for bot seats) and closes their socket; if they reconnect with
+  their token they take the seat back.
+- **Bots** are server seats. With any human not on autopilot at the table, bots never press "Ready
+  to vote", so humans get the discussion; bots-only tables ready up immediately.
+- **Timers.** The server arms one timer per engine epoch. A pause stores the remaining time; "add
+  60 s" re-arms with remaining + 60 s. `TIME_SCALE` shrinks all timers, including the night, for
+  demos and tests.
+- **Rejoin.** Seats are keyed by a random token the phone keeps in `localStorage`; the server
+  re-sends the full view on reconnect. A client never supplies an actor: the server binds it.
+- **Persistence.** Each room appends `create`, `seat`, `autopilot` and accepted `act` entries to
+  `data/rooms/CODE.jsonl`. Because the engine is deterministic from its seed, replaying the log
+  rebuilds the exact state; timers and bots restart from the top of the current step.
+- **Castle events.** The castle receives public events with each state message. Phones receive none:
+  everything private reaches a phone only as its own view.
+- **Night screen.** Every phone renders the same night layout. The notes panel shows the Traitor chat
+  for Traitors and the private journal for everyone else.
+- **Phones-only mode (R24), ghost predictions (R26) and replay (R27)** are Should/Could items and are
+  not built.
