@@ -73,7 +73,10 @@ if (!base) {
   await new Promise((resolve, reject) => {
     const t = setTimeout(() => reject(new Error('server did not start')), 90_000);
     server.stdout.on('data', (d) => {
-      if (String(d).includes('Midnight Table server')) (clearTimeout(t), resolve());
+      if (String(d).includes('Midnight Table server')) {
+        clearTimeout(t);
+        resolve();
+      }
     });
     server.on('exit', (c) => reject(new Error(`server exited early (${c})`)));
   });
@@ -136,7 +139,7 @@ function zombieControl(page) {
     kill: () => live.forEach((e) => (e.dead = true)),
     opened: () => opened,
     /** What the browser does when the tab wakes up. */
-    wake: () => page.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))),
+    wake: () => page.evaluate(() => document.dispatchEvent(new window.Event('visibilitychange'))),
   };
 }
 
@@ -392,7 +395,7 @@ try {
   await check('no uncaught page errors', async () => {
     assert.deepEqual(errors, []);
   });
-} catch (e) {
+} catch {
   log('stopping after failure');
   await shot(hostPage, 'failure-phone');
   process.exitCode = 1;
