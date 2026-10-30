@@ -6,6 +6,7 @@ export type LogEntry =
   | { k: 'create'; code: string; seed: number; config?: ConfigOverrides; ts: number }
   | { k: 'seat'; playerId: PlayerId; token: string; bot: boolean }
   | { k: 'autopilot'; playerId: PlayerId }
+  | { k: 'phonesOnly'; on: boolean }
   | { k: 'act'; action: Action };
 
 export interface RoomLog {

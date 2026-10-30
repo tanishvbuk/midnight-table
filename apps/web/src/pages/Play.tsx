@@ -10,6 +10,7 @@ import {
   type Connection,
 } from '../net';
 import { Countdown, Notices, Panel, PlayerChip, go } from '../ui';
+import { phasePanel } from './Castle';
 
 type PhaseOf<K extends GameView['phase']['kind']> = Extract<GameView['phase'], { kind: K }>;
 
@@ -57,6 +58,14 @@ function Lobby({ code, conn, s, v }: Ctx) {
             />
             <button onClick={() => conn.host({ cmd: 'addBots', count: bots })}>Add bots</button>
           </div>
+          <label className="row">
+            <input
+              type="checkbox"
+              checked={s.phonesOnly}
+              onChange={(e) => conn.host({ cmd: 'phonesOnly', on: e.target.checked })}
+            />
+            No TV: show the castle on every phone
+          </label>
           <button
             className="primary"
             disabled={v.players.length < 4}
@@ -374,13 +383,25 @@ function HostMenu({ conn, ctx, onClose }: { conn: Connection; ctx: Ctx; onClose:
   );
 }
 
+/** Public phases: the castle's panel on the phone in phones-only mode, else a pointer to the castle. */
+function Public({ ctx, text }: { ctx: Ctx; text: string }) {
+  const pv = ctx.s.publicView;
+  if (!pv) return <Waiting text={text} />;
+  const byId = new Map(pv.players.map((p) => [p.id, p]));
+  return <div className="public-feed">{phasePanel(pv, byId)}</div>;
+}
+
 function Body(ctx: Ctx) {
   const { v, you } = ctx;
   if (!you.alive && v.phase.kind !== 'finalReveal' && v.phase.kind !== 'lobby') {
+    const publicPhase = ['voteReveal', 'speech', 'breakfast'].includes(v.phase.kind);
     return (
-      <Panel title="You are a ghost">
-        <p>You can no longer act. Watch the castle and keep the secret of what you saw.</p>
-      </Panel>
+      <>
+        <Panel title="You are a ghost">
+          <p>You can no longer act. Watch the castle and keep the secret of what you saw.</p>
+        </Panel>
+        {publicPhase && ctx.s.publicView && <Public ctx={ctx} text="" />}
+      </>
     );
   }
   switch (v.phase.kind) {
@@ -403,11 +424,11 @@ function Body(ctx: Ctx) {
     case 'finalReveal':
       return <Final {...ctx} />;
     case 'voteReveal':
-      return <Waiting text="Watch the castle as the votes are revealed." />;
+      return <Public ctx={ctx} text="Watch the castle as the votes are revealed." />;
     case 'speech':
-      return <Waiting text="Listen to the banished player's last words." />;
+      return <Public ctx={ctx} text="Listen to the banished player's last words." />;
     case 'breakfast':
-      return <Waiting text="Breakfast is being served. Watch the castle." />;
+      return <Public ctx={ctx} text="Breakfast is being served. Watch the castle." />;
   }
 }
 

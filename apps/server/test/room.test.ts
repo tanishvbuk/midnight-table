@@ -235,3 +235,73 @@ describe('room: resent actions', () => {
     expect(room.act(ann.playerId, { type: 'ackRole' }, 'c1')).toBeNull();
   });
 });
+
+describe('room: phones-only mode (R24)', () => {
+  function lobby(seed: number) {
+    const { sched, room } = setup(seed);
+    const clients: FakeClient[] = [];
+    const joined = ['A', 'B', 'C', 'D'].map((n) => {
+      const j = room.join(n, null);
+      if (typeof j === 'string') throw new Error(j);
+      const c = new FakeClient();
+      room.connectPlayer(j.token, c);
+      clients.push(c);
+      return j;
+    });
+    return { sched, room, clients, joined };
+  }
+  const last = (c: FakeClient) => c.messages.filter((m) => m.t === 'state').at(-1);
+
+  it('is off by default, only the creator can switch it, and only in the lobby', () => {
+    const { room, clients, joined } = lobby(11);
+    expect(last(clients[0])).toMatchObject({ phonesOnly: false, publicView: null });
+    expect(room.host(joined[1].playerId, { cmd: 'phonesOnly', on: true })).toMatch(/creator/);
+    expect(room.host(joined[0].playerId, { cmd: 'phonesOnly', on: true })).toBeNull();
+    expect(last(clients[1])).toMatchObject({ phonesOnly: true });
+    expect(room.act(joined[0].playerId, { type: 'start' })).toBeNull();
+    expect(room.host(joined[0].playerId, { cmd: 'phonesOnly', on: false })).toMatch(/lobby/);
+  });
+
+  it('gives every phone the same castle view and never anything role-dependent', () => {
+    const { sched, room } = setup(12);
+    const human = new FakeClient();
+    const joined = room.join('Human', null);
+    if (typeof joined === 'string') throw new Error(joined);
+    room.connectPlayer(joined.token, human);
+    room.host(joined.playerId, { cmd: 'addBots', count: 5 });
+    room.host(joined.playerId, { cmd: 'phonesOnly', on: true });
+    const rng = rngFor(12);
+    const seen = new Set<string>();
+    human.onMessage = (m) => {
+      if (m.t !== 'state') return;
+      expect(m.publicView).toEqual(view(room.state, 'castle'));
+      seen.add(m.view.phase.kind);
+      const action = viewPolicy(m.view, rng);
+      if (action) sched.setTimeout(() => void room.act(joined.playerId, action), 100);
+    };
+    room.act(joined.playerId, { type: 'start' });
+    sched.run(() => room.state.phase.kind === 'finalReveal');
+    expect(seen.has('night')).toBe(true);
+    expect(seen.has('voteReveal')).toBe(true);
+    expect(
+      JSON.stringify(
+        human.messages.filter((m) => m.t === 'state').map((m) => m.t === 'state' && m.publicView),
+      ),
+    ).not.toMatch(/"role":"(traitor|faithful)"[^}]*"you"/);
+  });
+
+  it('survives a restart from the log', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'room-'));
+    dirs.push(dir);
+    const sched = new VirtualScheduler();
+    const live = new Room({ code: 'LOGG', seed: 13, scheduler: sched, log: openLog(dir, 'LOGG') });
+    const j = live.join('A', null);
+    if (typeof j === 'string') throw new Error(j);
+    live.host(j.playerId, { cmd: 'phonesOnly', on: true });
+    const [entry] = readLogs(dir);
+    const restored = Room.restore(entry.entries, { scheduler: new VirtualScheduler() });
+    const c = new FakeClient();
+    restored?.connectPlayer(j.token, c);
+    expect(last(c)).toMatchObject({ phonesOnly: true });
+  });
+});

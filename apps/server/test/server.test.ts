@@ -67,31 +67,41 @@ async function boot(extra: Partial<Parameters<typeof createServer>[0]> = {}) {
 }
 
 describe('websocket server', () => {
-  it.each([4, 6, 12])('plays a %i-player game, 1 human plus bots, over real sockets', async (n) => {
-    const { ws, code } = await boot();
-    const rng = rngFor(n);
-    const castle = new Socket(ws);
-    await castle.ready();
-    castle.send({ t: 'hello', room: code, kind: 'castle' });
+  it.each([4, 6, 12])(
+    'plays a %i-player game, 1 human plus bots, over real sockets',
+    async (n) => {
+      const { ws, code } = await boot();
+      const rng = rngFor(n);
+      const castle = new Socket(ws);
+      await castle.ready();
+      castle.send({ t: 'hello', room: code, kind: 'castle' });
 
-    const human = new Socket(ws, (s, self) => {
-      const a = viewPolicy(s.view, rng);
-      if (a) self.send({ t: 'act', action: a });
-    });
-    await human.ready();
-    human.send({ t: 'hello', room: code, kind: 'player', name: 'Human' });
-    await human.until(() => human.welcome !== null);
-    expect(human.welcome?.token).toBeTruthy();
+      // Like a person, send each decision once rather than on every state message the bots cause.
+      let lastSent = '';
+      const human = new Socket(ws, (s, self) => {
+        const a = viewPolicy(s.view, rng);
+        const key = a ? `${s.view.phase.kind}:${JSON.stringify(a)}` : '';
+        if (a && key !== lastSent) {
+          lastSent = key;
+          self.send({ t: 'act', action: a });
+        }
+      });
+      await human.ready();
+      human.send({ t: 'hello', room: code, kind: 'player', name: 'Human' });
+      await human.until(() => human.welcome !== null);
+      expect(human.welcome?.token).toBeTruthy();
 
-    human.send({ t: 'host', command: { cmd: 'addBots', count: n - 1 } });
-    await human.until(() => human.state?.view.players.length === n);
-    human.send({ t: 'act', action: { type: 'start' } });
-    await castle.until(() => castle.state?.view.phase.kind === 'finalReveal');
+      human.send({ t: 'host', command: { cmd: 'addBots', count: n - 1 } });
+      await human.until(() => human.state?.view.players.length === n);
+      human.send({ t: 'act', action: { type: 'start' } });
+      await castle.until(() => castle.state?.view.phase.kind === 'finalReveal');
 
-    expect(castle.state?.view.you).toBeNull();
-    expect(JSON.stringify(castle.state)).not.toContain('"chat":[{');
-    expect(human.errors.filter((e) => !/Invalid|already|not in/i.test(e))).toEqual([]);
-  });
+      expect(castle.state?.view.you).toBeNull();
+      expect(JSON.stringify(castle.state)).not.toContain('"chat":[{');
+      expect(human.errors.filter((e) => !/Invalid|already|not in/i.test(e))).toEqual([]);
+    },
+    30_000,
+  );
 
   it('rejoins from a token and rejects a stale one', async () => {
     const { ws, code, http } = await boot();

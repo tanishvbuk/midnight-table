@@ -158,7 +158,7 @@ function NightSky() {
   );
 }
 
-function phasePanel(v: GameView, byId: Map<string, PublicPlayer>) {
+export function phasePanel(v: GameView, byId: Map<string, PublicPlayer>) {
   const ph = v.phase;
   const name = (id: string | null) => (id ? (byId.get(id)?.name ?? '?') : 'abstained');
   switch (ph.kind) {

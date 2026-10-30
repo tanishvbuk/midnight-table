@@ -8,7 +8,9 @@ export type HostCommand =
   | { cmd: 'rerunVote' }
   | { cmd: 'dropPlayer'; target: PlayerId }
   | { cmd: 'endGame' }
-  | { cmd: 'addBots'; count: number };
+  | { cmd: 'addBots'; count: number }
+  /** Lobby only. With no castle, phones also receive the public view and render it. */
+  | { cmd: 'phonesOnly'; on: boolean };
 
 export type ClientMessage =
   | { t: 'hello'; room: string; kind: 'castle' }
@@ -35,6 +37,10 @@ export interface StateMessage {
   paused: boolean;
   hostId: PlayerId | null;
   isHost: boolean;
+  /** Phones-only mode (R24) is on. */
+  phonesOnly: boolean;
+  /** The castle's view, sent to phones only in phones-only mode. It never depends on a role. */
+  publicView: GameView | null;
   /** Public events from the latest step. Sent to the castle only. */
   events: GameEvent[];
 }

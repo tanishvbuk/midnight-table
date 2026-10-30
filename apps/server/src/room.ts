@@ -87,6 +87,7 @@ export class Room {
   private paused = false;
   private botQueued = new Set<string>();
   private replaying = false;
+  private phonesOnly = false;
   lastActivity: number;
 
   constructor(opts: RoomOptions) {
@@ -127,7 +128,8 @@ export class Room {
       else if (e.k === 'autopilot') {
         const seat = room.seats.get(e.playerId);
         if (seat) seat.autopilot = true;
-      } else if (e.k === 'act') {
+      } else if (e.k === 'phonesOnly') room.phonesOnly = e.on;
+      else if (e.k === 'act') {
         const res = apply(room.state, e.action);
         if (!res.error) room.state = res.state;
       }
@@ -263,6 +265,13 @@ export class Room {
         const name = this.state.players.find((p) => p.id === command.target)?.name ?? 'A player';
         return this.announce(`The host dropped ${name}.`);
       }
+      case 'phonesOnly': {
+        if (!inLobby) return 'Phones-only mode is chosen in the lobby.';
+        this.phonesOnly = command.on === true;
+        this.log.append({ k: 'phonesOnly', on: this.phonesOnly });
+        this.broadcast([]);
+        return null;
+      }
       case 'addBots': {
         if (!inLobby) return 'Bots can only join in the lobby.';
         const used = new Set(this.state.players.map((p) => p.name));
@@ -372,6 +381,8 @@ export class Room {
       paused: this.paused,
       hostId: this.state.hostId,
       isHost: playerId !== null && playerId === this.state.hostId,
+      phonesOnly: this.phonesOnly,
+      publicView: this.phonesOnly && playerId !== null ? castleView : null,
       events: playerId === null ? events.filter((e) => e.audience === 'public') : [],
     });
   }

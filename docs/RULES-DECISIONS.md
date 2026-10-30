@@ -117,8 +117,23 @@ bots (R22) belong to the server work in M2. The simulator's bots are in `package
   everything private reaches a phone only as its own view.
 - **Night screen.** Every phone renders the same night layout. The notes panel shows the Traitor chat
   for Traitors and the private journal for everyone else.
-- **Phones-only mode (R24), ghost predictions (R26) and replay (R27)** are Should/Could items and are
-  not built.
+- **Ghost predictions (R26) and replay (R27)** are Should items and are not built.
+
+## M4: phones-only mode (R24)
+
+- **How it is switched on.** The creator ticks "No TV" in the lobby (host command `phonesOnly`). It
+  cannot change once the game has started, and it is written to the room log so a restart keeps it.
+  It is not auto-detected: a castle that drops mid-game must not change what phones show.
+- **What phones get.** The state message carries `phonesOnly` and `publicView`, which is exactly the
+  castle's view (never role-dependent, so it cannot leak). Phones render the castle's panel for the
+  public phases they would otherwise wait through: vote reveal, banishment speech and breakfast.
+  Ghosts see the same panels under their ghost card. Narration was already sent to phones.
+- **Night.** Nothing changes: every phone keeps the identical night screen and no night panel is
+  shown. Public events are still sent to the castle only.
+- **A castle may still join** a phones-only room; both get the same public information.
+- **Open.** Public panels are shown in the phone's own layout, not the TV's, and have only been
+  looked at in Chromium at 390x844. Whether a shared phone feed is readable and paced well is a
+  playtest question.
 
 ## M3: playtest preparation
 

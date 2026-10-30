@@ -27,6 +27,8 @@ tunnel blip that recovers, or one dropped-and-returned player is not a restart.
 - [ ] Hosting is set up as in [`HOSTING.md`](HOSTING.md), and `https://…/healthz` answers.
 - [ ] Bot rehearsal from your own phone **on mobile data**: create, add bots, start, lock the phone
       for 10 s, unlock, check you are back in under 5 s with your night pick still selected.
+- [ ] Phones-only rehearsal (no TV): tick "No TV" in the lobby, start with bots, and check that vote
+      reveal, the banishment speech and breakfast show on your phone and the night screen is unchanged.
 - [ ] The castle screen is plugged in, sleep is off, and the browser tab is full screen.
 - [ ] Sound off on phones. Brightness up. Do-not-disturb on (a notification banner on a locked
       phone is a tell).
