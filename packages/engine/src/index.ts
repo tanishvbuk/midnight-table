@@ -1,6 +1,7 @@
 export * from './types';
 export * from './presets';
 export * from './rng';
+export { MISSION_CARDS, type MissionCard } from './cards';
 export { QUESTION_BANK, QUESTION_SETS } from './questions';
 export {
   apply,

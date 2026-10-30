@@ -246,12 +246,19 @@ try {
       await hostPage.getByRole('button', { name: 'Add bots' }).click();
     }
     await tvPage.waitForFunction((n) => document.querySelectorAll('.seat').length === n, want);
+    // R25: switch physical task cards on; the box only ticks once the server confirms.
+    const physicalBox = hostPage.getByLabel(/Physical tasks/);
+    await physicalBox.click(); // check() would fail: the box ticks only after the server confirms
+    await hostPage.waitForFunction(
+      () => document.querySelector('input[type=checkbox]:checked') !== null,
+    );
     await hostPage.getByRole('button', { name: /Start with/ }).click();
     await hostPage.waitForSelector('text=Your role');
     await shot(tvPage, '04-castle-role-reveal');
   });
 
   let myRole = null;
+  let sawPhysical = false;
   await check('hold to reveal shows the role only while held', async () => {
     assert(!/TRAITOR|FAITHFUL/.test(await phoneText(hostPage)), 'role visible before holding');
     const shown = await holdReveal(hostPage);
@@ -322,7 +329,14 @@ try {
       if (t) phasesSeen.add(t.replace(/\d+/g, 'N'));
       if (t && /win/i.test(t)) break;
       try {
-        if (t?.startsWith('Question')) {
+        if ((await hostPage.getByRole('button', { name: 'It passed' }).count()) > 0) {
+          if (!sawPhysical) {
+            sawPhysical = true;
+            await shot(tvPage, '14-castle-physical-mission');
+            await shot(hostPage, '15-physical-mission');
+          }
+          await hostPage.getByRole('button', { name: 'It passed' }).click({ timeout: 800 });
+        } else if (t?.startsWith('Question')) {
           const n = Number(/Question (\d+)/.exec(t)[1]);
           if (n === 4 && !reloadedMidQuiz) {
             reloadedMidQuiz = true;
@@ -390,6 +404,7 @@ try {
       }
       await sleep(120);
     }
+    log(`     physical mission card seen: ${sawPhysical}; phases: ${[...phasesSeen].join(' / ')}`);
     await shot(hostPage, '08-final-phone');
     await shot(tvPage, '09-final-castle');
   });

@@ -175,6 +175,17 @@ export function phasePanel(v: GameView, byId: Map<string, PublicPlayer>) {
           answered.
         </p>
       );
+    case 'physicalMission':
+      return (
+        <div className="spotlight">
+          <h2>{ph.title}</h2>
+          <p className="narration">{ph.text}</p>
+          <p className="status">
+            {ph.submitted.length} of {v.players.filter((p) => p.fate === 'alive').length} have
+            voted.
+          </p>
+        </div>
+      );
     case 'discussion':
       return (
         <p className="status">

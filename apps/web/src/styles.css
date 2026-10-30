@@ -96,6 +96,11 @@ button.danger {
   flex: 1;
   min-width: 0;
 }
+.row input[type='checkbox'] {
+  flex: none;
+  width: 22px;
+  height: 22px;
+}
 .stack {
   display: flex;
   flex-direction: column;

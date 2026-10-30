@@ -1,3 +1,4 @@
+import { MISSION_CARDS } from './cards';
 import { DEFAULT_CONFIG, MAX_PLAYERS, MIN_PLAYERS, NIGHT_MS, presetFor } from './presets';
 import { QUESTION_BANK } from './questions';
 import { HISTORY_EVENTS } from './timeline';
@@ -43,6 +44,8 @@ export function createGame(options: CreateGameOptions): GameState {
   return {
     rng: options.seed >>> 0,
     asked: [],
+    askedCards: [],
+    physicalMissions: false,
     epoch: 0,
     config,
     preset: null,
@@ -175,6 +178,10 @@ function handle(c: Ctx, a: Action): void {
     case 'timeout':
       if (a.epoch !== s.epoch) reject('stale timeout');
       return onTimeout(c);
+    case 'setPhysicalMissions':
+      if (s.phase.kind !== 'lobby') reject('physical missions are chosen in the lobby');
+      s.physicalMissions = a.on === true;
+      return;
     case 'rerunVote':
       return rerunVote(c);
     case 'endGame':
@@ -204,6 +211,8 @@ function handle(c: Ctx, a: Action): void {
       return nightNote(c, actor, a.text);
     case 'recruitReply':
       return recruitReply(c, a.actor, a.accept);
+    case 'physicalVote':
+      return physicalVote(c, a.actor, a.pass);
   }
 }
 
@@ -231,6 +240,8 @@ function onTimeout(c: Ctx): void {
       return startMission(c);
     case 'mission':
       return resolveMission(c);
+    case 'physicalMission':
+      return resolvePhysical(c);
     case 'endgameVote':
       return resolveEndgameVote(c);
     case 'discussion':
@@ -322,6 +333,7 @@ function startMission(c: Ctx): void {
   const { s } = c;
   s.day++;
   for (const p of s.players) p.shield = false;
+  if (s.physicalMissions && s.day % 2 === 0) return startPhysical(c);
   const want = s.config.questionsPerMission;
   let fresh = QUESTION_BANK.map((_, i) => i).filter((i) => !s.asked.includes(i));
   if (fresh.length < want) {
@@ -332,6 +344,43 @@ function startMission(c: Ctx): void {
   s.asked.push(...picked);
   const questions = picked.map((i) => structuredClone(QUESTION_BANK[i] as Question));
   enter(c, { kind: 'mission', questions, answers: {} });
+}
+
+function startPhysical(c: Ctx): void {
+  const { s } = c;
+  let fresh = MISSION_CARDS.map((_, i) => i).filter((i) => !s.askedCards.includes(i));
+  if (fresh.length === 0) {
+    s.askedCards = [];
+    fresh = MISSION_CARDS.map((_, i) => i);
+  }
+  const card = c.rng.pick(fresh);
+  s.askedCards.push(card);
+  enter(c, { kind: 'physicalMission', card, votes: {} });
+}
+
+function physicalVote(c: Ctx, actor: PlayerId, pass: boolean): void {
+  const p = c.s.phase;
+  if (p.kind !== 'physicalMission') reject('not in a physical mission');
+  if (typeof pass !== 'boolean') reject('bad vote');
+  if (p.votes[actor]) reject('already voted');
+  p.votes[actor] = pass ? 'pass' : 'fail';
+  if (alivePlayers(c.s).every((x) => p.votes[x.id])) resolvePhysical(c);
+}
+
+/** A strict majority of the living must vote pass. A missing vote counts as fail. */
+function resolvePhysical(c: Ctx): void {
+  const { s } = c;
+  const p = s.phase;
+  if (p.kind !== 'physicalMission') return;
+  const alive = alivePlayers(s);
+  const yes = alive.filter((x) => p.votes[x.id] === 'pass').length;
+  const passed = yes * 2 > alive.length;
+  if (passed) {
+    s.pot += s.config.physicalPot;
+    emit(c, { type: 'PotChanged', pot: s.pot });
+  }
+  emit(c, { type: 'PhysicalResult', card: p.card, passed });
+  enterRoundTable(c);
 }
 
 function submitAnswers(c: Ctx, actor: PlayerId, answers: (number | null)[]): void {
@@ -707,6 +756,8 @@ export function pendingActors(s: GameState): PlayerId[] {
       return alive.filter((id) => !p.acked.includes(id));
     case 'mission':
       return alive.filter((id) => !p.answers[id]);
+    case 'physicalMission':
+      return alive.filter((id) => !p.votes[id]);
     case 'endgameVote':
       return alive.filter((id) => !p.votes[id]);
     case 'discussion':
@@ -730,6 +781,8 @@ export function timerMs(s: GameState): number | null {
       return t.roleRevealMs;
     case 'mission':
       return t.missionMs;
+    case 'physicalMission':
+      return t.physicalMs;
     case 'endgameVote':
       return t.endgameVoteMs;
     case 'discussion':

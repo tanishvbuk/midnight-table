@@ -10,7 +10,9 @@ export type HostCommand =
   | { cmd: 'endGame' }
   | { cmd: 'addBots'; count: number }
   /** Lobby only. With no castle, phones also receive the public view and render it. */
-  | { cmd: 'phonesOnly'; on: boolean };
+  | { cmd: 'phonesOnly'; on: boolean }
+  /** Lobby only. Every other mission becomes a physical task card (R25). */
+  | { cmd: 'physicalMissions'; on: boolean };
 
 export type ClientMessage =
   | { t: 'hello'; room: string; kind: 'castle' }
@@ -39,6 +41,8 @@ export interface StateMessage {
   isHost: boolean;
   /** Phones-only mode (R24) is on. */
   phonesOnly: boolean;
+  /** Physical mission cards (R25) are switched on. */
+  physicalMissions: boolean;
   /** The castle's view, sent to phones only in phones-only mode. It never depends on a role. */
   publicView: GameView | null;
   /** Public events from the latest step. Sent to the castle only. */

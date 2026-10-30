@@ -333,3 +333,31 @@ describe('room: ghost predictions (R26)', () => {
     }
   });
 });
+
+describe('room: physical mission cards (R25)', () => {
+  it('is a creator-only lobby setting, shown to everyone, and kept across a restart', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'mt-'));
+    dirs.push(dir);
+    const sched = new VirtualScheduler();
+    const live = new Room({ code: 'PHYS', seed: 3, scheduler: sched, log: openLog(dir, 'PHYS') });
+    const clients = ['A', 'B', 'C', 'D'].map((n) => {
+      const j = live.join(n, null);
+      if (typeof j === 'string') throw new Error(j);
+      const c = new FakeClient();
+      live.connectPlayer(j.token, c);
+      return { j, c };
+    });
+    const [a, b] = clients;
+    expect(live.host(b.j.playerId, { cmd: 'physicalMissions', on: true })).toMatch(/creator/);
+    expect(live.host(a.j.playerId, { cmd: 'physicalMissions', on: true })).toBeNull();
+    expect(b.c.last?.physicalMissions).toBe(true);
+    expect(live.act(a.j.playerId, { type: 'physicalVote', pass: 'yes' })).toBe('Invalid action.');
+    expect(live.act(a.j.playerId, { type: 'start' })).toBeNull();
+    expect(live.host(a.j.playerId, { cmd: 'physicalMissions', on: false })).toBeTruthy();
+
+    const back = Room.restore(readLogs(dir)[0]?.entries ?? [], {
+      scheduler: new VirtualScheduler(),
+    });
+    expect(back?.state.physicalMissions).toBe(true);
+  });
+});

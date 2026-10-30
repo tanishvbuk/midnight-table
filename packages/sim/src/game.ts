@@ -61,6 +61,8 @@ export function playGame(opts: PlayOptions): GameOutcome {
 
   const ids: PlayerId[] = Array.from({ length: opts.players }, (_, i) => `p${i + 1}`);
   ids.forEach((id) => play({ type: 'join', id, name: id }));
+  // Half the games use physical mission cards (R25), so the alternation is exercised too.
+  if (opts.seed % 2 === 0) play({ type: 'setPhysicalMissions', on: true });
   play({ type: 'start', actor: ids[0] as PlayerId });
 
   while (state.phase.kind !== 'finalReveal' && steps < maxSteps && failures.length === 0) {
@@ -117,6 +119,7 @@ function injectNoise(s: GameState, rng: Rng, step: (a: Action) => ApplyResult): 
     { type: 'join', id: 'late', name: 'late' },
     { type: 'vote', actor: anyone.id, target: anyone.id },
     { type: 'nightPick', actor: anyone.id, target: anyone.id },
+    { type: 'setPhysicalMissions', on: true },
   ];
   if (dead.length > 0) {
     const d = rng.pick(dead).id;
@@ -129,6 +132,7 @@ function injectNoise(s: GameState, rng: Rng, step: (a: Action) => ApplyResult): 
       { type: 'endgameVote', actor: d, choice: 'end' },
       { type: 'recruitReply', actor: d, accept: true },
       { type: 'submitAnswers', actor: d, answers: [] },
+      { type: 'physicalVote', actor: d, pass: true },
       { type: 'predict', actor: d, suspects: [d] },
       { type: 'predict', actor: d, suspects: [target, target] },
     );

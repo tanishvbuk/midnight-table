@@ -1,10 +1,11 @@
+import { MISSION_CARDS } from './cards';
 import type { GameEvent, GameState, PlayerId } from './types';
 
 /** One line of the post-game replay (R27). */
 export interface TimelineEntry {
   /** "Day 2" or "Night 2": when it happened. */
   when: string;
-  kind: 'vote' | 'banish' | 'murder' | 'shield' | 'recruit' | 'endgame' | 'note';
+  kind: 'mission' | 'vote' | 'banish' | 'murder' | 'shield' | 'recruit' | 'endgame' | 'note';
   text: string;
 }
 
@@ -23,6 +24,7 @@ export const HISTORY_EVENTS: ReadonlySet<GameEvent['type']> = new Set([
   'RecruitResponded',
   'Recruited',
   'BreakfastResult',
+  'PhysicalResult',
   'MurderFailed',
 ]);
 
@@ -43,6 +45,12 @@ export function buildTimeline(s: GameState): TimelineEntry[] {
     switch (e.type) {
       case 'PhaseStarted':
         when = `${e.phase === 'night' || e.phase === 'recruitOffer' ? 'Night' : 'Day'} ${e.day}`;
+        break;
+      case 'PhysicalResult':
+        add(
+          'mission',
+          `The group ${e.passed ? 'passed' : 'failed'} the task "${MISSION_CARDS[e.card]?.title ?? '?'}".`,
+        );
         break;
       case 'VoteRevealed':
         add(

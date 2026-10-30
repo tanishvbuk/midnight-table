@@ -31,6 +31,9 @@ export function parsePlayerAction(raw: Record<string, unknown>, actor: PlayerId)
     case 'nightNote':
       if (!isStr(raw.text, 500)) return null;
       return { type: 'nightNote', actor, text: raw.text };
+    case 'physicalVote':
+      if (typeof raw.pass !== 'boolean') return null;
+      return { type: 'physicalVote', actor, pass: raw.pass };
     case 'recruitReply':
       if (typeof raw.accept !== 'boolean') return null;
       return { type: 'recruitReply', actor, accept: raw.accept };

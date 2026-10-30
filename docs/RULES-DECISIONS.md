@@ -191,3 +191,26 @@ Agreed with the project owner before building.
   "Watch the castle" in phones-only mode.
 - **Open.** Only the guess at the end is scored; nobody has tried this with real people. Whether
   ghosts use it, and whether a result line at the end is enough reward, is a playtest question.
+
+## M4: physical mission cards (R25)
+
+Agreed with the project owner before building.
+
+- **Switch.** The creator ticks "Physical tasks" in the lobby (host command `physicalMissions`,
+  engine action `setPhysicalMissions`). Off by default, lobby only. It lives in `GameState`, so
+  the room log replays it.
+- **When.** The first mission is always the quiz; after that, missions on even days (2, 4, …)
+  are physical, the rest quizzes.
+- **The card.** One of 30 original, indoor, safe tasks (`packages/engine/src/cards.ts`), shown
+  identically on every phone and the castle, never repeated until the deck is used up.
+- **The vote.** Each living player votes pass or fail in secret (`physicalVote`). The phase ends
+  when all have voted or the timer (180 s) ends. Strictly more than half of the living must vote
+  pass; a missing vote is a fail, so exactly half fails. Traitors can quietly vote fail, as with
+  the quiz. Only the result is shown, never a tally, so a close vote reveals nothing.
+- **Reward.** Pass: the pot grows by 400 (`physicalPot`). Fail: nothing. No Shield or clue
+  (those stay tied to the quiz), so a run of physical missions means fewer Shields.
+- **Replay.** The final timeline says whether the group passed or failed each task.
+- **Open.** Whether 180 s, 30 cards and the 400 reward suit a real room is a playtest question.
+  Nothing checks the task was actually done: the vote is honour-based by design.
+- **Side fix.** Lobby checkboxes were stretched to full width by the shared `.row input` style
+  (found when the e2e test could not see the new box); they now keep a fixed size.

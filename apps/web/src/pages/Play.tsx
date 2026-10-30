@@ -66,6 +66,14 @@ function Lobby({ code, conn, s, v }: Ctx) {
             />
             No TV: show the castle on every phone
           </label>
+          <label className="row">
+            <input
+              type="checkbox"
+              checked={s.physicalMissions}
+              onChange={(e) => conn.host({ cmd: 'physicalMissions', on: e.target.checked })}
+            />
+            Physical tasks: every other mission is a task for the whole table
+          </label>
           <button
             className="primary"
             disabled={v.players.length < 4}
@@ -152,6 +160,28 @@ function Quiz({ code, you, act, v }: Ctx) {
       <button className="ghost" onClick={() => setAnswers([...answers, null])}>
         Skip
       </button>
+    </Panel>
+  );
+}
+
+function PhysicalMission({ you, act, v }: Ctx) {
+  const ph = v.phase as PhaseOf<'physicalMission'>;
+  return (
+    <Panel title={ph.title}>
+      <p>{ph.text}</p>
+      <p className="muted">
+        Do it together. When it is over, vote in secret on whether the group pulled it off.
+      </p>
+      {you.physicalVote ? (
+        <Waiting text="Your vote is cast. Waiting for the others…" />
+      ) : (
+        <div className="stack">
+          <button className="primary" onClick={() => act({ type: 'physicalVote', pass: true })}>
+            It passed
+          </button>
+          <button onClick={() => act({ type: 'physicalVote', pass: false })}>It failed</button>
+        </div>
+      )}
     </Panel>
   );
 }
@@ -446,7 +476,9 @@ function Guess({ you, v, act }: Ctx) {
 function Body(ctx: Ctx) {
   const { v, you } = ctx;
   if (!you.alive && v.phase.kind !== 'finalReveal' && v.phase.kind !== 'lobby') {
-    const publicPhase = ['voteReveal', 'speech', 'breakfast'].includes(v.phase.kind);
+    const publicPhase = ['voteReveal', 'speech', 'breakfast', 'physicalMission'].includes(
+      v.phase.kind,
+    );
     return (
       <>
         <Panel title="You are a ghost">
@@ -468,6 +500,8 @@ function Body(ctx: Ctx) {
       return <Reveal {...ctx} />;
     case 'mission':
       return <Quiz {...ctx} />;
+    case 'physicalMission':
+      return <PhysicalMission {...ctx} />;
     case 'discussion':
       return <Discussion {...ctx} />;
     case 'voting':

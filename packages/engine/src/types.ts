@@ -21,6 +21,8 @@ export interface Timers {
   endgameVoteMs: number;
   recruitMs: number;
   breakfastStepMs: number;
+  /** How long a physical mission lasts: time to do the task and to vote. */
+  physicalMs: number;
 }
 
 export interface Config {
@@ -29,6 +31,8 @@ export interface Config {
   revealRoles: 'always' | 'until-endgame';
   questionsPerMission: number;
   potPerCorrect: number;
+  /** Pot gained when the group passes a physical mission card (R25). */
+  physicalPot: number;
 }
 
 export interface Question {
@@ -68,6 +72,12 @@ export type Phase =
       kind: 'mission';
       questions: Question[];
       answers: Record<PlayerId, (number | null)[]>;
+    }
+  | {
+      kind: 'physicalMission';
+      /** Index into MISSION_CARDS. */
+      card: number;
+      votes: Record<PlayerId, 'pass' | 'fail'>;
     }
   | { kind: 'endgameVote'; votes: Record<PlayerId, 'end' | 'continue'> }
   | { kind: 'discussion'; ready: PlayerId[] }
@@ -121,6 +131,10 @@ export interface GameState {
   rng: number;
   /** Indices into the question bank already used this game, so missions do not repeat. Never in a view. */
   asked: number[];
+  /** Mission cards used so far this game, so none repeats until the deck is used up. */
+  askedCards: number[];
+  /** The creator switched physical missions on in the lobby (R25). */
+  physicalMissions: boolean;
   /** Timer epoch: bumps on every phase change and every sub-step. A stale timeout is ignored. */
   epoch: number;
   config: Config;
@@ -154,9 +168,12 @@ export type Action =
   | { type: 'nightPick'; actor: PlayerId; target: PlayerId }
   | { type: 'nightNote'; actor: PlayerId; text: string }
   | { type: 'recruitReply'; actor: PlayerId; accept: boolean }
+  | { type: 'physicalVote'; actor: PlayerId; pass: boolean }
   /** Ghosts only: replaces the ghost's guess at who the Traitors are. Has no effect on the game. */
   | { type: 'predict'; actor: PlayerId; suspects: PlayerId[] }
   | { type: 'timeout'; epoch: number }
+  /** Lobby only, server-authenticated: whether every other mission is a physical card. */
+  | { type: 'setPhysicalMissions'; on: boolean }
   /** Host escape hatch (server-authenticated): clears the ballots of the current vote and reopens it. */
   | { type: 'rerunVote' }
   /** Host escape hatch (server-authenticated): ends the game now with the usual payout. */
@@ -171,6 +188,7 @@ export type EventBody =
   | { type: 'RoleDealt'; role: Role; team: PlayerId[] | null }
   | { type: 'PhaseStarted'; phase: PhaseKind; epoch: number; day: number }
   | { type: 'PotChanged'; pot: number }
+  | { type: 'PhysicalResult'; card: number; passed: boolean }
   | { type: 'ShieldGranted' }
   | { type: 'ClueGranted'; faithful: PlayerId }
   | { type: 'NoteAdded'; author: PlayerId; text: string; channel: 'chat' | 'journal' }

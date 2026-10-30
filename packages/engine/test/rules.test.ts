@@ -766,3 +766,92 @@ describe('ghost predictions (R26)', () => {
     expect(apply(end, { type: 'predict', actor: 'p3', suspects: [] }).error).toBeDefined();
   });
 });
+
+describe('physical mission cards (R25)', () => {
+  const N = 12;
+  const physical = () => {
+    let s = lobby(N);
+    s = ok(s, { type: 'setPhysicalMissions', on: true }).state;
+    return ok(s, { type: 'start', actor: 'p1' }).state;
+  };
+  /** Ticks on to the next mission screen of either kind. */
+  const nextMission = (s: GameState): GameState => {
+    let cur = tick(s).state;
+    for (let i = 0; i < 400; i++) {
+      if (cur.phase.kind === 'mission' || cur.phase.kind === 'physicalMission') return cur;
+      cur = tick(cur).state;
+    }
+    throw new Error('no mission');
+  };
+  const atPhysical = (): GameState => {
+    const next = nextMission(tickTo(physical(), 'mission'));
+    expect(next.phase.kind).toBe('physicalMission');
+    return next;
+  };
+
+  it('is off by default and can only be changed in the lobby', () => {
+    expect(started(6).physicalMissions).toBe(false);
+    expect(apply(physical(), { type: 'setPhysicalMissions', on: false }).error).toBeDefined();
+  });
+
+  it('alternates quiz and physical missions, starting with the quiz', () => {
+    let s = tickTo(physical(), 'mission');
+    expect(s.day).toBe(1);
+    s = nextMission(s);
+    expect([s.phase.kind, s.day]).toEqual(['physicalMission', 2]);
+    s = nextMission(s);
+    expect([s.phase.kind, s.day]).toEqual(['mission', 3]);
+  });
+
+  const living = (s: GameState) => s.players.filter((p) => p.fate === 'alive').map((p) => p.id);
+
+  it('needs a strict majority of the living to pass, and counts missing votes as fail', () => {
+    const base = atPhysical();
+    const pot = base.pot;
+    const who = living(base);
+    const run = (passes: number, missing = 0) => {
+      let s = base;
+      who.forEach((p, i) => {
+        if (i < passes) s = ok(s, { type: 'physicalVote', actor: p, pass: true }).state;
+        else if (i < who.length - missing) {
+          s = ok(s, { type: 'physicalVote', actor: p, pass: false }).state;
+        }
+      });
+      return s.phase.kind === 'physicalMission' ? tick(s) : { state: s };
+    };
+    const half = Math.floor(who.length / 2);
+    const win = run(half + 1);
+    expect(win.state.pot).toBe(pot + 400);
+    expect(win.state.phase.kind).not.toBe('physicalMission');
+    expect(win.state.history.some((e) => e.type === 'PhysicalResult' && e.passed)).toBe(true);
+    if (who.length % 2 === 0) expect(run(half).state.pot).toBe(pot); // exactly half is not enough
+    expect(run(half, who.length - half).state.pot).toBe(pot); // missing votes are fails
+    expect(run(0).state.pot).toBe(pot);
+  });
+
+  it('keeps votes secret, gives no Shield or clue, and rejects repeats', () => {
+    let s = atPhysical();
+    const [first, second, ...rest] = living(s) as [string, string, ...string[]];
+    s = ok(s, { type: 'physicalVote', actor: first, pass: false }).state;
+    expect(apply(s, { type: 'physicalVote', actor: first, pass: true }).error).toBeDefined();
+    expect(view(s, first).you?.physicalVote).toBe('fail');
+    expect(view(s, second).you?.physicalVote).toBeNull();
+    expect(JSON.stringify(view(s, 'castle'))).not.toContain('"fail"');
+    for (const p of [second, ...rest]) {
+      s = ok(s, { type: 'physicalVote', actor: p, pass: true }).state;
+    }
+    expect(s.players.some((p) => p.shield || p.clues.length > 0)).toBe(false);
+  });
+
+  it('never repeats a card within a game', () => {
+    let s = atPhysical();
+    for (let i = 0; i < 3; i++) {
+      try {
+        s = nextMission(nextMission(s));
+      } catch {
+        break; // the game ended
+      }
+    }
+    expect(new Set(s.askedCards).size).toBe(s.askedCards.length);
+  });
+});

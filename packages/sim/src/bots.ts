@@ -21,6 +21,8 @@ export function botAction(s: GameState, actor: PlayerId, rng: Rng): Action | nul
         actor,
         answers: p.questions.map((q) => (rng.next() < 0.1 ? null : rng.int(q.options.length))),
       };
+    case 'physicalMission':
+      return { type: 'physicalVote', actor, pass: rng.next() < 0.7 };
     case 'endgameVote':
       return { type: 'endgameVote', actor, choice: rng.next() < 0.3 ? 'end' : 'continue' };
     case 'discussion':

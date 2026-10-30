@@ -16,6 +16,8 @@ export function narrate(v: GameView): string {
       return 'Look at your phones. Hold to learn your fate, then tell no one.';
     case 'mission':
       return `A mission awaits. Every correct answer feeds the pot, now at ${v.pot}.`;
+    case 'physicalMission':
+      return `A task for the whole table: ${ph.title}. Do it together, then vote in secret on whether it was done.`;
     case 'endgameVote':
       return 'The endgame is here. In secret: end the game now, or banish again?';
     case 'discussion':

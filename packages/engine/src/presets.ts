@@ -27,8 +27,10 @@ export const DEFAULT_CONFIG: Config = {
     endgameVoteMs: 45_000,
     recruitMs: 30_000,
     breakfastStepMs: 2_500,
+    physicalMs: 180_000,
   },
   revealRoles: 'always',
   questionsPerMission: 8,
   potPerCorrect: 100,
+  physicalPot: 400,
 };

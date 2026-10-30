@@ -1,4 +1,5 @@
 import { alivePlayers, getPlayer, readyThreshold, timerMs } from './engine';
+import { MISSION_CARDS } from './cards';
 import { buildTimeline, type TimelineEntry } from './timeline';
 import type { Fate, GameState, PlayerId, Role, VoteStage, Winner } from './types';
 
@@ -17,6 +18,7 @@ export type PhaseView =
   | { kind: 'lobby'; hostId: PlayerId | null }
   | { kind: 'roleReveal'; acked: PlayerId[] }
   | { kind: 'mission'; questions: { text: string; options: string[] }[]; submitted: PlayerId[] }
+  | { kind: 'physicalMission'; title: string; text: string; submitted: PlayerId[] }
   | { kind: 'endgameVote'; submitted: PlayerId[] }
   | { kind: 'discussion'; ready: PlayerId[]; needed: number }
   | {
@@ -70,6 +72,8 @@ export interface YouView {
   shield: boolean;
   clues: PlayerId[];
   answered: boolean;
+  /** Your pass/fail on a physical mission, once cast. */
+  physicalVote: 'pass' | 'fail' | null;
   /** Your ballot while voting, `undefined`-free: null means abstained or not yet voted. */
   voted: boolean;
   vote: PlayerId | null;
@@ -112,6 +116,15 @@ function phaseView(s: GameState): PhaseView {
         questions: p.questions.map((q) => ({ text: q.text, options: [...q.options] })),
         submitted: Object.keys(p.answers),
       };
+    case 'physicalMission': {
+      const card = MISSION_CARDS[p.card];
+      return {
+        kind: 'physicalMission',
+        title: card?.title ?? '',
+        text: card?.text ?? '',
+        submitted: Object.keys(p.votes),
+      };
+    }
     case 'endgameVote':
       return { kind: 'endgameVote', submitted: Object.keys(p.votes) };
     case 'discussion':
@@ -191,6 +204,7 @@ function youView(s: GameState, id: PlayerId): YouView | null {
     shield: alive && me.shield,
     clues: alive ? [...me.clues] : [],
     answered: false,
+    physicalVote: null,
     voted: false,
     vote: null,
     endgameChoice: null,
@@ -214,6 +228,9 @@ function youView(s: GameState, id: PlayerId): YouView | null {
   switch (p.kind) {
     case 'mission':
       view.answered = id in p.answers;
+      break;
+    case 'physicalMission':
+      view.physicalVote = p.votes[id] ?? null;
       break;
     case 'endgameVote':
       view.endgameChoice = p.votes[id] ?? null;

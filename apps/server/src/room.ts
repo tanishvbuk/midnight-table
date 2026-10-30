@@ -272,6 +272,11 @@ export class Room {
         this.broadcast([]);
         return null;
       }
+      case 'physicalMissions': {
+        const err = this.tryApply({ type: 'setPhysicalMissions', on: command.on === true });
+        if (!err) this.broadcast([]);
+        return err;
+      }
       case 'addBots': {
         if (!inLobby) return 'Bots can only join in the lobby.';
         const used = new Set(this.state.players.map((p) => p.name));
@@ -382,6 +387,7 @@ export class Room {
       hostId: this.state.hostId,
       isHost: playerId !== null && playerId === this.state.hostId,
       phonesOnly: this.phonesOnly,
+      physicalMissions: this.state.physicalMissions,
       publicView: this.phonesOnly && playerId !== null ? castleView : null,
       events: playerId === null ? events.filter((e) => e.audience === 'public') : [],
     });

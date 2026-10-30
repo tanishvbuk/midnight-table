@@ -39,6 +39,7 @@ describe('invariants over random bot games', () => {
                 { type: 'nightPick', actor: p.id, target: other },
                 { type: 'nightNote', actor: p.id, text: 'hello' },
                 { type: 'recruitReply', actor: p.id, accept: true },
+                { type: 'physicalVote', actor: p.id, pass: true },
               ];
               for (const a of attempts) {
                 const r = apply(s, a);
