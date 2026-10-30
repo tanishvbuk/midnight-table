@@ -15,6 +15,7 @@
     "sim": "tsx packages/sim/src/cli.ts",
     "build": "pnpm --filter @midnight/web build",
     "start": "pnpm build && pnpm --filter @midnight/server start",
+    "e2e": "node e2e/run.mjs",
     "dev:server": "pnpm --filter @midnight/server dev",
     "dev:web": "pnpm --filter @midnight/web dev"
   },
