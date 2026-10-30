@@ -58,7 +58,8 @@ should be reviewed.
   follows.
 - A Shield lasts until the next murder resolution, or until the next mission starts, whichever is
   first. Only the pot total is public.
-- 100 points per correct answer. The question bank is a 24-question placeholder.
+- 100 points per correct answer. The bank has 150+ original questions in 11 categories; a game
+  never repeats a question until the bank is used up (`GameState.asked`, never in a view).
 
 ## Round Table
 
@@ -118,3 +119,26 @@ bots (R22) belong to the server work in M2. The simulator's bots are in `package
   for Traitors and the private journal for everyone else.
 - **Phones-only mode (R24), ghost predictions (R26) and replay (R27)** are Should/Could items and are
   not built.
+
+## M3: playtest preparation
+
+- **Hosting.** Laptop behind an HTTPS tunnel is the primary plan; a small VPS with Caddy is the
+  documented backup. See `docs/HOSTING.md`. My call, not agreed: say so if you prefer the VPS.
+- **Resending actions.** Every `act` carries a client id (`cid`). The server applies each id once
+  and always acks it, so a phone can resend everything unacked after a reconnect without doubling
+  a night note. Host commands are never queued or resent, because "add 60 seconds" twice is not
+  the same as once.
+- **Join is idempotent.** The phone picks its own seat token before the first hello; a join whose
+  reply was lost is retried with the same token and name and takes the same seat.
+- **Drafts.** The quiz answers so far, the vote pick and the night note are kept in local
+  storage, tagged with the phase epoch, so a reload resumes them. They are never sent early.
+- **Dead sockets.** A locked phone usually keeps a socket that looks open. The client probes on
+  wake-up and drops the socket if nothing comes back in 1.2 s; the server pings every 10 s.
+- **QR address.** Castles and the host's phone use the server's idea of the public address when
+  the page was opened on a local one, so a castle opened at `localhost` still shows a QR that
+  works for phones.
+- **Night screen.** The castle shows a moon and nothing else tied to the night: no counts of who
+  has picked, no per-player status beyond who is alive. Phones keep one identical layout for
+  every role; only the contents of the notes list differ, as before.
+- **Not exposed in the UI.** Timers and the role-reveal setting are engine config only. The spec
+  says the creator can adjust timers; there is no screen for that yet.

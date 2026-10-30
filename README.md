@@ -27,11 +27,21 @@ logs, default `data/rooms`), `WEB_DIR`, `TIME_SCALE` (e.g. `0.05` to run a game 
 
 For development run `pnpm dev:server` and `pnpm dev:web` (Vite proxies `/api` and `/ws`).
 
-Selfies and the Wake Lock API need HTTPS on real devices; use a tunnel for game night (decided at M3).
+Wake Lock needs HTTPS on real devices, so game night runs the laptop behind a tunnel (or on a small
+VPS). Exact commands are in [`docs/HOSTING.md`](docs/HOSTING.md); the playtest plan is in
+[`docs/PLAYTEST.md`](docs/PLAYTEST.md).
+
+Also: `HOST` (bind address, use `127.0.0.1` behind a proxy) and `PUBLIC_URL` (the address QR codes
+point at; derived from proxy headers if unset).
 
 ## Checks
 
 ```bash
 pnpm lint && pnpm typecheck && pnpm test && pnpm build
 pnpm sim --games 10000 --players 4-16 --seed 1
+pnpm e2e              # optional, not in CI: real Chromium on phone viewports against `pnpm start`
 ```
+
+`pnpm e2e` needs `playwright` resolvable from Node (preinstalled in the cloud sandbox; elsewhere
+`npm i -g playwright && npx playwright install chromium`). It spawns the server with scaled timers,
+plays a full game with bots through the UI, and writes screenshots to `e2e/out/`.
