@@ -1,12 +1,20 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import type { GameView, PublicPlayer, StateMessage, YouView } from '@midnight/engine';
-import { readToken, useGame, type Connection } from '../net';
+import {
+  readPending,
+  readToken,
+  useDraft,
+  useGame,
+  usePublicOrigin,
+  type Connection,
+} from '../net';
 import { Countdown, Notices, Panel, PlayerChip, go } from '../ui';
 
 type PhaseOf<K extends GameView['phase']['kind']> = Extract<GameView['phase'], { kind: K }>;
 
 interface Ctx {
+  code: string;
   conn: Connection;
   s: StateMessage;
   v: GameView;
@@ -19,16 +27,14 @@ function Waiting({ text }: { text: string }) {
   return <p className="muted center-text">{text}</p>;
 }
 
-function Lobby({ conn, s, v }: Ctx) {
+function Lobby({ code, conn, s, v }: Ctx) {
   const [bots, setBots] = useState(3);
   const [qr, setQr] = useState('');
-  const code = location.pathname.split('/').pop() ?? '';
+  const origin = usePublicOrigin();
   useEffect(() => {
     if (s.isHost)
-      void QRCode.toDataURL(`${location.origin}/join/${code}`, { margin: 1, width: 220 }).then(
-        setQr,
-      );
-  }, [s.isHost, code]);
+      void QRCode.toDataURL(`${origin}/join/${code}`, { margin: 1, width: 220 }).then(setQr);
+  }, [s.isHost, code, origin]);
   return (
     <>
       <Panel title={`Room ${code}`}>
@@ -106,13 +112,18 @@ function Reveal({ you, act, v }: Ctx) {
   );
 }
 
-function Quiz({ you, act, v }: Ctx) {
+function Quiz({ code, you, act, v }: Ctx) {
   const ph = v.phase as PhaseOf<'mission'>;
-  const [answers, setAnswers] = useState<(number | null)[]>([]);
+  // Kept across a reload, so a refreshed phone carries on from the question it was on.
+  const [answers, setAnswers] = useDraft<(number | null)[]>(code, 'quiz', v.epoch, []);
   const i = answers.length;
   const finished = i >= ph.questions.length;
+  const sent = useRef(false);
   useEffect(() => {
-    if (finished && !you.answered) act({ type: 'submitAnswers', answers });
+    if (finished && !you.answered && !sent.current) {
+      sent.current = true; // the connection resends it until the server acks
+      act({ type: 'submitAnswers', answers });
+    }
   }, [finished, you.answered, answers, act]);
   if (you.answered || finished) {
     return <Waiting text="Answers locked in. Waiting for the others…" />;
@@ -152,9 +163,9 @@ function Discussion({ you, act, v }: Ctx) {
   );
 }
 
-function Vote({ you, act, v, others }: Ctx) {
+function Vote({ code, you, act, v, others }: Ctx) {
   const ph = v.phase as PhaseOf<'voting'>;
-  const [pick, setPick] = useState<string | null>(null);
+  const [pick, setPick] = useDraft<string | null>(code, 'vote', v.epoch, null);
   if (!ph.eligible.includes(you.id))
     return <Waiting text="The tied players cannot vote. The rest of the table decides." />;
   if (you.voted) return <Waiting text="Your vote is cast. Watch the castle." />;
@@ -198,8 +209,8 @@ function EndgameVote({ you, act }: Ctx) {
 }
 
 /** Every role sees this exact screen. Only the contents of the notes panel differ. */
-function Night({ you, act, others }: Ctx) {
-  const [text, setText] = useState('');
+function Night({ code, v, you, act, others }: Ctx) {
+  const [text, setText] = useDraft(code, 'note', v.epoch, '');
   const notes = you.team
     ? you.chat.map((m) => ({ key: `${m.author}${m.text}`, text: m.text, author: m.author }))
     : you.journal.map((m) => ({ key: m.text + m.night, text: m.text, author: '' }));
@@ -401,16 +412,7 @@ function Body(ctx: Ctx) {
 }
 
 export function Play({ code }: { code: string }) {
-  const pending = useMemo(() => {
-    try {
-      return JSON.parse(sessionStorage.getItem(`mt:pending:${code}`) ?? 'null') as {
-        name: string;
-        avatar: string | null;
-      } | null;
-    } catch {
-      return null;
-    }
-  }, [code]);
+  const pending = useMemo(() => readPending(code), [code]);
   const seated = readToken(code) !== null;
   const conn = useGame(code, 'player', pending ?? {});
   const [card, setCard] = useState(false);
@@ -451,6 +453,7 @@ export function Play({ code }: { code: string }) {
     );
   const you = s.view.you;
   const ctx: Ctx = {
+    code,
     conn,
     s,
     v: s.view,

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import type { GameView, PublicPlayer } from '@midnight/engine';
-import { useGame } from '../net';
+import { usePublicOrigin, useGame } from '../net';
 import { Countdown, Notices, Portrait } from '../ui';
 
 function Roster({ v }: { v: GameView }) {
@@ -23,7 +23,8 @@ function Roster({ v }: { v: GameView }) {
 
 function Join({ code }: { code: string }) {
   const [qr, setQr] = useState('');
-  const url = `${location.origin}/join/${code}`;
+  const origin = usePublicOrigin();
+  const url = `${origin}/join/${code}`;
   useEffect(() => {
     void QRCode.toDataURL(url, {
       margin: 1,
@@ -36,7 +37,7 @@ function Join({ code }: { code: string }) {
       {qr && <img src={qr} alt="Scan to join" />}
       <div>
         <div className="muted">Scan, or go to</div>
-        <div className="small-url">{location.host}</div>
+        <div className="small-url">{new URL(origin).host}</div>
         <div className="bigcode">{code}</div>
       </div>
     </div>

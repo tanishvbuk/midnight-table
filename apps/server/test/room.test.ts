@@ -220,3 +220,18 @@ function mkdtemp(): string {
   dirs.push(d);
   return d;
 }
+
+describe('room: resent actions', () => {
+  it('applies an action with the same client id once, and still judges a fresh one', () => {
+    const { room, sched } = setup(3);
+    const ann = room.join('Ann', null);
+    if (typeof ann === 'string') throw new Error(ann);
+    expect(room.host(ann.playerId, { cmd: 'addBots', count: 3 })).toBeNull();
+    expect(room.act(ann.playerId, { type: 'start' })).toBeNull();
+    expect(room.act(ann.playerId, { type: 'ackRole' }, 'c1')).toBeNull();
+    sched.run(() => room.state.phase.kind === 'mission');
+    // The role reveal is long over, so a fresh ackRole is rejected, but the resend of c1 is not.
+    expect(room.act(ann.playerId, { type: 'ackRole' }, 'c2')).toMatch(/not in/i);
+    expect(room.act(ann.playerId, { type: 'ackRole' }, 'c1')).toBeNull();
+  });
+});

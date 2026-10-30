@@ -20,7 +20,8 @@ export type ClientMessage =
       name?: string;
       avatar?: string | null;
     }
-  | { t: 'act'; action: Record<string, unknown> }
+  /** `cid` makes an action safe to resend: the server applies each cid once and always acks it. */
+  | { t: 'act'; action: Record<string, unknown>; cid?: string }
   | { t: 'host'; command: HostCommand }
   | { t: 'ping' };
 
@@ -48,5 +49,6 @@ export type ServerMessage =
     }
   | StateMessage
   | { t: 'notice'; text: string }
-  | { t: 'error'; message: string; fatal?: boolean }
+  | { t: 'error'; message: string; fatal?: boolean; cid?: string }
+  | { t: 'ack'; cid: string }
   | { t: 'pong' };

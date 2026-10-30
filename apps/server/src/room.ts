@@ -33,6 +33,8 @@ interface Seat {
   /** A dropped human: the server plays defaults for them from now on. */
   autopilot: boolean;
   clients: Set<Client>;
+  /** Recent client action ids, so a resent action is applied once. */
+  seenCids: string[];
 }
 
 export interface RoomOptions {
@@ -140,20 +142,24 @@ export class Room {
   // ------------------------------------------------------------ seats and sockets
 
   private addSeat(playerId: PlayerId, token: string, bot: boolean): Seat {
-    const seat: Seat = { playerId, token, bot, autopilot: false, clients: new Set() };
+    const seat: Seat = { playerId, token, bot, autopilot: false, clients: new Set(), seenCids: [] };
     this.seats.set(playerId, seat);
     this.tokens.set(token, playerId);
     return seat;
   }
 
   /** A new human joins the lobby. */
-  join(name: string, avatar: string | null): { playerId: PlayerId; token: string } | string {
-    return this.seat(name, avatar, false);
+  join(
+    name: string,
+    avatar: string | null,
+    token?: string,
+  ): { playerId: PlayerId; token: string } | string {
+    return this.seat(name, avatar, false, token);
   }
 
-  private seat(name: string, avatar: string | null, bot: boolean) {
+  private seat(name: string, avatar: string | null, bot: boolean, wanted?: string) {
     const playerId = randomBytes(4).toString('hex');
-    const token = randomBytes(18).toString('hex');
+    const token = wanted && !this.tokens.has(wanted) ? wanted : randomBytes(16).toString('hex');
     const res = this.tryApply({ type: 'join', id: playerId, name, avatar });
     if (res) return res;
     this.addSeat(playerId, token, bot);
@@ -193,11 +199,18 @@ export class Room {
 
   // ------------------------------------------------------------ commands
 
-  act(playerId: PlayerId, raw: Record<string, unknown>): string | null {
+  act(playerId: PlayerId, raw: Record<string, unknown>, cid?: string): string | null {
+    const seat = this.seats.get(playerId);
+    if (cid && seat?.seenCids.includes(cid)) return null; // a resend of something already applied
     if (this.paused) return 'The game is paused.';
     const action = parsePlayerAction(raw, playerId);
     if (!action) return 'Invalid action.';
-    return this.tryApply(action);
+    const err = this.tryApply(action);
+    if (!err && cid && seat) {
+      seat.seenCids.push(cid);
+      if (seat.seenCids.length > 64) seat.seenCids.shift();
+    }
+    return err;
   }
 
   host(playerId: PlayerId, command: HostCommand): string | null {

@@ -6,6 +6,8 @@ const port = Number(process.env.PORT ?? 8787);
 const webDir = resolve(process.env.WEB_DIR ?? 'apps/web/dist');
 const server = createServer({
   port,
+  host: process.env.HOST || undefined,
+  publicUrl: process.env.PUBLIC_URL || undefined,
   dataDir: resolve(process.env.DATA_DIR ?? 'data/rooms'),
   webDir: existsSync(webDir) ? webDir : undefined,
   timeScale: Number(process.env.TIME_SCALE ?? 1),

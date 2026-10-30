@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { readToken } from '../net';
+import { readToken, savePending } from '../net';
 import { go, resizeImage } from '../ui';
 
 export function Join({ code }: { code: string }) {
@@ -20,11 +20,7 @@ export function Join({ code }: { code: string }) {
     }
   };
   const enter = () => {
-    try {
-      sessionStorage.setItem(`mt:pending:${code}`, JSON.stringify({ name: name.trim(), avatar }));
-    } catch {
-      return setError('Your browser blocked storage; try a normal tab.');
-    }
+    savePending(code, { name: name.trim(), avatar });
     go(`/play/${code}`);
   };
 

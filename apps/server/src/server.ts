@@ -1,7 +1,7 @@
 import { randomInt } from 'node:crypto';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer as createHttp, type IncomingMessage, type ServerResponse } from 'node:http';
-import { extname, join, normalize } from 'node:path';
+import { extname, join, normalize, sep } from 'node:path';
 import type { ClientMessage, ConfigOverrides, HostCommand, ServerMessage } from '@midnight/engine';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { openLog, readLogs } from './log';
@@ -13,6 +13,11 @@ export interface ServerOptions {
   dataDir?: string;
   webDir?: string;
   scheduler?: Scheduler;
+  /** Public origin to put in QR codes, e.g. https://table.example.com. Derived from proxy headers if unset. */
+  publicUrl?: string;
+  host?: string;
+  /** Protocol ping interval; a socket that misses one pong is dropped. */
+  heartbeatMs?: number;
   timeScale?: number;
   botDelayMs?: [number, number];
   config?: ConfigOverrides;
@@ -29,6 +34,9 @@ const MIME: Record<string, string> = {
   '.ico': 'image/x-icon',
 };
 const IDLE_ROOM_MS = 6 * 60 * 60 * 1000;
+/** Protocol-level ping, so a phone that vanished (lock, tunnel drop) is noticed quickly. */
+const HEARTBEAT_MS = 10_000;
+const TOKEN_RE = /^[0-9a-f]{32}$/;
 
 export class RoomManager {
   readonly rooms = new Map<string, Room>();
@@ -87,18 +95,47 @@ function json(res: ServerResponse, status: number, body: unknown): void {
 
 function serveStatic(webDir: string, req: IncomingMessage, res: ServerResponse): void {
   const url = new URL(req.url ?? '/', 'http://x');
-  let file = normalize(join(webDir, decodeURIComponent(url.pathname)));
-  if (!file.startsWith(webDir)) return void json(res, 403, { error: 'forbidden' });
+  let pathname: string;
+  try {
+    pathname = decodeURIComponent(url.pathname);
+  } catch {
+    return void json(res, 400, { error: 'bad path' });
+  }
+  let file = normalize(join(webDir, pathname));
+  if (file !== webDir && !file.startsWith(webDir + sep)) {
+    return void json(res, 403, { error: 'forbidden' });
+  }
   if (!existsSync(file) || statSync(file).isDirectory()) file = join(webDir, 'index.html');
   if (!existsSync(file)) return void json(res, 404, { error: 'not found' });
-  res.writeHead(200, { 'content-type': MIME[extname(file)] ?? 'application/octet-stream' });
+  // Vite fingerprints everything under /assets, so it can be cached forever. The shell must not be.
+  const cache = file.includes(`${sep}assets${sep}`)
+    ? 'public, max-age=31536000, immutable'
+    : 'no-cache';
+  res.writeHead(200, {
+    'content-type': MIME[extname(file)] ?? 'application/octet-stream',
+    'cache-control': cache,
+  });
   res.end(readFileSync(file));
+}
+
+/** The origin guests should scan: explicit config first, then what the proxy says, then the Host header. */
+export function publicOrigin(req: IncomingMessage, configured?: string): string {
+  if (configured) return configured.replace(/\/+$/, '');
+  const first = (v: string | string[] | undefined): string | undefined =>
+    (Array.isArray(v) ? v[0] : v)?.split(',')[0]?.trim() || undefined;
+  const host = first(req.headers['x-forwarded-host']) ?? req.headers.host ?? 'localhost';
+  const proto = first(req.headers['x-forwarded-proto']) === 'https' ? 'https' : 'http';
+  return `${proto}://${host}`;
 }
 
 export function createServer(opts: ServerOptions) {
   const manager = new RoomManager(opts);
-  const http = createHttp((req, res) => {
+  const handle = (req: IncomingMessage, res: ServerResponse): void => {
     const url = new URL(req.url ?? '/', 'http://x');
+    if (url.pathname === '/healthz') return json(res, 200, { ok: true });
+    if (req.method === 'GET' && url.pathname === '/api/config') {
+      return json(res, 200, { publicUrl: publicOrigin(req, opts.publicUrl) });
+    }
     if (req.method === 'POST' && url.pathname === '/api/rooms') {
       return json(res, 200, { code: manager.create().code });
     }
@@ -114,6 +151,14 @@ export function createServer(opts: ServerOptions) {
     }
     if (opts.webDir && req.method === 'GET') return serveStatic(opts.webDir, req, res);
     json(res, 404, { error: 'not found' });
+  };
+  const http = createHttp((req, res) => {
+    try {
+      handle(req, res);
+    } catch {
+      if (!res.headersSent) json(res, 500, { error: 'server error' });
+      else res.end();
+    }
   });
 
   const wss = new WebSocketServer({ server: http, path: '/ws', maxPayload: 200_000 });
@@ -128,6 +173,13 @@ export function createServer(opts: ServerOptions) {
     let playerId: string | null = null;
     let burst = 0;
     const refill = setInterval(() => (burst = 0), 1000);
+    let alive = true;
+    ws.on('pong', () => (alive = true));
+    const heartbeat = setInterval(() => {
+      if (!alive) return ws.terminate();
+      alive = false;
+      ws.ping();
+    }, opts.heartbeatMs ?? HEARTBEAT_MS);
 
     ws.on('message', (data) => {
       if (++burst > 30) return client.send({ t: 'error', message: 'Slow down.' });
@@ -156,7 +208,10 @@ export function createServer(opts: ServerOptions) {
         }
         let token = typeof msg.token === 'string' ? msg.token : null;
         let id = token ? found.connectPlayer(token, client) : null;
-        if (id === null && token) {
+        const name = typeof msg.name === 'string' ? msg.name : '';
+        // A name means "I am joining". The phone picks its own token, so a join whose reply was
+        // lost to a dropped connection can be retried without taking a second seat.
+        if (id === null && token && !name) {
           return client.send({
             t: 'error',
             message: 'Your seat is gone. Join again.',
@@ -164,9 +219,12 @@ export function createServer(opts: ServerOptions) {
           });
         }
         if (id === null) {
-          const name = typeof msg.name === 'string' ? msg.name : '';
           const avatar = typeof msg.avatar === 'string' ? msg.avatar : null;
-          const joined = found.join(name, avatar);
+          const joined = found.join(
+            name,
+            avatar,
+            token && TOKEN_RE.test(token) ? token : undefined,
+          );
           if (typeof joined === 'string') {
             return client.send({ t: 'error', message: joined, fatal: true });
           }
@@ -182,12 +240,17 @@ export function createServer(opts: ServerOptions) {
       }
       if (!room || !playerId) return client.send({ t: 'error', message: 'Say hello first.' });
       let err: string | null = null;
-      if (msg.t === 'act') err = room.act(playerId, (msg.action ?? {}) as Record<string, unknown>);
-      else if (msg.t === 'host') err = room.host(playerId, msg.command as HostCommand);
-      if (err) client.send({ t: 'error', message: err });
+      let cid: string | undefined;
+      if (msg.t === 'act') {
+        cid = typeof msg.cid === 'string' && msg.cid.length <= 40 ? msg.cid : undefined;
+        err = room.act(playerId, (msg.action ?? {}) as Record<string, unknown>, cid);
+      } else if (msg.t === 'host') err = room.host(playerId, msg.command as HostCommand);
+      if (err) client.send({ t: 'error', message: err, cid });
+      if (cid) client.send({ t: 'ack', cid });
     });
     ws.on('close', () => {
       clearInterval(refill);
+      clearInterval(heartbeat);
       room?.disconnect(client);
     });
     ws.on('error', () => ws.close());
@@ -201,7 +264,7 @@ export function createServer(opts: ServerOptions) {
     http,
     listen: () =>
       new Promise<number>((resolve) =>
-        http.listen(opts.port, () => {
+        http.listen(opts.port, opts.host, () => {
           const addr = http.address();
           resolve(typeof addr === 'object' && addr ? addr.port : opts.port);
         }),

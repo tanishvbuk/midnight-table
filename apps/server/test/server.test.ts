@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { connect } from 'node:net';
 import WebSocket from 'ws';
 import type { ClientMessage, ServerMessage, StateMessage } from '@midnight/engine';
 import { createServer } from '../src/server';
@@ -15,8 +16,12 @@ class Socket {
   welcome: Extract<ServerMessage, { t: 'welcome' }> | null = null;
   errors: string[] = [];
   private waiters: (() => void)[] = [];
-  constructor(url: string, onState?: (s: StateMessage, self: Socket) => void) {
-    this.ws = new WebSocket(url);
+  constructor(
+    url: string,
+    onState?: (s: StateMessage, self: Socket) => void,
+    headers?: Record<string, string>,
+  ) {
+    this.ws = new WebSocket(url, { headers });
     this.ws.on('message', (d) => {
       const m = JSON.parse(d.toString()) as ServerMessage;
       if (m.t === 'welcome') this.welcome = m;
@@ -50,8 +55,8 @@ class Socket {
   }
 }
 
-async function boot() {
-  const server = createServer({ port: 0, timeScale: 0.002, botDelayMs: [0, 3] });
+async function boot(extra: Partial<Parameters<typeof createServer>[0]> = {}) {
+  const server = createServer({ port: 0, timeScale: 0.002, botDelayMs: [0, 3], ...extra });
   const port = await server.listen();
   open.push(server);
   const http = `http://127.0.0.1:${port}`;
@@ -114,5 +119,69 @@ describe('websocket server', () => {
     const info = (await (await fetch(`${http}/api/rooms/${code}`)).json()) as { players: number };
     expect(info.players).toBe(1);
     expect((await fetch(`${http}/api/rooms/ZZZZ`)).status).toBe(404);
+  });
+
+  it('lets a join be retried with the same token without taking a second seat', async () => {
+    const { ws, code, http } = await boot();
+    const token = 'a1'.repeat(16);
+    const first = new Socket(ws);
+    await first.ready();
+    first.send({ t: 'hello', room: code, kind: 'player', name: 'Ann', token });
+    await first.until(() => first.welcome !== null && first.state !== null);
+    expect(first.welcome?.token).toBe(token);
+    first.ws.terminate();
+
+    const retry = new Socket(ws);
+    await retry.ready();
+    retry.send({ t: 'hello', room: code, kind: 'player', name: 'Ann', token });
+    await retry.until(() => retry.state !== null);
+    expect(retry.welcome?.playerId).toBe(first.welcome?.playerId);
+    const info = (await (await fetch(`${http}/api/rooms/${code}`)).json()) as { players: number };
+    expect(info.players).toBe(1);
+  });
+
+  it('works behind a TLS-terminating proxy', async () => {
+    const { ws, code, http } = await boot();
+    const headers = {
+      origin: 'https://table.example.com',
+      'x-forwarded-proto': 'https',
+      'x-forwarded-host': 'table.example.com',
+      'x-forwarded-for': '203.0.113.9',
+    };
+    const cfg = (await (await fetch(`${http}/api/config`, { headers })).json()) as {
+      publicUrl: string;
+    };
+    expect(cfg.publicUrl).toBe('https://table.example.com');
+    expect(((await (await fetch(`${http}/healthz`)).json()) as { ok: boolean }).ok).toBe(true);
+
+    const sock = new Socket(ws, undefined, headers);
+    await sock.ready();
+    sock.send({ t: 'hello', room: code, kind: 'castle' });
+    await sock.until(() => sock.state !== null);
+    expect(sock.state?.view.phase.kind).toBe('lobby');
+  });
+
+  it('prefers the configured public URL over proxy headers', async () => {
+    const { http } = await boot({ publicUrl: 'https://fixed.example.org/' });
+    const cfg = (await (
+      await fetch(`${http}/api/config`, { headers: { 'x-forwarded-host': 'other.example' } })
+    ).json()) as { publicUrl: string };
+    expect(cfg.publicUrl).toBe('https://fixed.example.org');
+  });
+
+  it('drops a socket that stops answering protocol pings', async () => {
+    const { ws } = await boot({ heartbeatMs: 40 });
+    const { port } = new URL(ws);
+    // A raw TCP client that completes the handshake and then never answers a ping.
+    const raw = connect(Number(port), '127.0.0.1');
+    raw.write(
+      'GET /ws HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n' +
+        'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n',
+    );
+    raw.resume();
+    await new Promise<void>((res, rej) => {
+      const t = setTimeout(() => rej(new Error('socket never dropped')), 3000);
+      raw.on('close', () => (clearTimeout(t), res()));
+    });
   });
 });
