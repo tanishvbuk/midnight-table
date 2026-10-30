@@ -420,3 +420,196 @@ button.danger {
   flex-wrap: wrap;
   gap: 12px;
 }
+
+/* ------------------------------------------------------------ castle on a TV */
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-120px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes drift {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-14px);
+  }
+}
+.castle .status {
+  font-size: clamp(1.6rem, 2.4vw, 2.6rem);
+}
+.vote-reveal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+.vote-count {
+  color: var(--muted);
+  font-size: clamp(1.2rem, 1.8vw, 2rem);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.vote-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(24px, 5vw, 96px);
+  animation: pop-in 0.5s ease-out;
+}
+.vote-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  font-size: clamp(1.6rem, 3vw, 3.2rem);
+  min-width: 14ch;
+}
+.vote-side.to .portrait {
+  box-shadow: 0 0 0 6px var(--red);
+}
+.vote-arrow {
+  color: var(--gold);
+  font-family: Georgia, serif;
+  font-style: italic;
+  font-size: clamp(1.4rem, 2.4vw, 2.6rem);
+}
+.abstain {
+  color: var(--muted);
+  font-style: italic;
+}
+.tally {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px 40px;
+}
+.tally-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: clamp(1.1rem, 1.6vw, 1.8rem);
+}
+.tally-pips i {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: var(--red);
+  animation: pop-in 0.4s ease-out;
+}
+.breakfast {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  min-height: 40vh;
+  justify-content: center;
+}
+.arriving {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  font-size: clamp(1.8rem, 3.2vw, 3.4rem);
+  animation: slide-in 0.7s ease-out;
+}
+.verdict {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  font-size: clamp(1.8rem, 3.2vw, 3.4rem);
+  animation: pop-in 0.8s ease-out;
+}
+.verdict.death .portrait {
+  filter: grayscale(1);
+  box-shadow: 0 0 0 6px var(--red);
+}
+.verdict.death span {
+  color: var(--red);
+}
+.verdict.safe b {
+  color: var(--green);
+}
+.night-sky {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30vh;
+}
+.moon {
+  width: clamp(120px, 14vw, 240px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #f3ecd9, #b9b0cf 70%);
+  box-shadow: 0 0 80px 10px rgba(185, 176, 207, 0.25);
+  animation: drift 6s ease-in-out infinite alternate;
+}
+.castle.night .roster {
+  opacity: 0.55;
+}
+.castle .spotlight h2 {
+  font-size: clamp(2rem, 4vw, 4rem);
+}
+@media (min-width: 1400px) {
+  .castle {
+    padding: 40px 64px;
+  }
+  .castle header {
+    font-size: 2.2rem;
+  }
+  .narration {
+    font-size: 3.6rem;
+  }
+  .seat {
+    width: 150px;
+  }
+  .seat-name {
+    font-size: 1.4rem;
+  }
+  .seat-tag {
+    font-size: 1rem;
+  }
+  .bigcode {
+    font-size: 8rem;
+  }
+  .small-url {
+    font-size: 2.2rem;
+  }
+  .join-box img {
+    width: 360px;
+  }
+  .final {
+    font-size: 2rem;
+  }
+  .notice {
+    font-size: 1.6rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vote-stage,
+  .arriving,
+  .verdict,
+  .moon,
+  .tally-pips i {
+    animation: none;
+  }
+}

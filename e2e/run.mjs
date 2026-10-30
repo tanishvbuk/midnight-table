@@ -298,6 +298,7 @@ try {
   let zombieNight = false;
   let sawNightNote = null;
   const phasesSeen = new Set();
+  const snapped = new Set();
   const nightScreens = [];
   const deadline = Date.now() + Number(process.env.E2E_GAME_MS ?? 8 * 60_000);
 
@@ -305,6 +306,18 @@ try {
     await hostPage.getByRole('button', { name: 'I have seen it' }).click();
     for (;;) {
       assert(Date.now() < deadline, `game did not finish; last panel: ${await title(hostPage)}`);
+      for (const [name, sel] of [
+        ['10-castle-vote-reveal', '.vote-stage'],
+        ['11-castle-breakfast-arrival', '.arriving'],
+        ['12-castle-breakfast-verdict', '.verdict'],
+        ['13-castle-speech', '.spotlight'],
+      ]) {
+        if (!snapped.has(name) && (await tvPage.locator(sel).count()) > 0) {
+          snapped.add(name);
+          if (!/breakfast/.test(name)) await sleep(900); // let the entrance animation finish
+          await shot(tvPage, name);
+        }
+      }
       const t = await title(hostPage);
       if (t) phasesSeen.add(t.replace(/\d+/g, 'N'));
       if (t && /win/i.test(t)) break;
