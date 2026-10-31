@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
 import type { GameView, PublicPlayer, StateMessage, YouView } from '@midnight/engine';
-import { readToken, useGame, type Connection } from '../net';
+import { readToken, useGame, usePublicOrigin, type Connection } from '../net';
 import { Countdown, Notices, Panel, PlayerChip, Portrait, go } from '../ui';
 
 type PhaseOf<K extends GameView['phase']['kind']> = Extract<GameView['phase'], { kind: K }>;
@@ -23,12 +23,11 @@ function Lobby({ conn, s, v }: Ctx) {
   const [bots, setBots] = useState(3);
   const [qr, setQr] = useState('');
   const code = location.pathname.split('/').pop() ?? '';
+  const origin = usePublicOrigin();
   useEffect(() => {
     if (s.isHost)
-      void QRCode.toDataURL(`${location.origin}/join/${code}`, { margin: 1, width: 220 }).then(
-        setQr,
-      );
-  }, [s.isHost, code]);
+      void QRCode.toDataURL(`${origin}/join/${code}`, { margin: 1, width: 220 }).then(setQr);
+  }, [s.isHost, code, origin]);
   return (
     <>
       <Panel title={`Room ${code}`}>

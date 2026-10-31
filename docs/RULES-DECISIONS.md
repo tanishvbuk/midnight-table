@@ -195,3 +195,52 @@ history, screen and music, food, sport, words, general).
 - `pnpm screens` reproduces the screenshots in `docs/screens`. Two of them (the recruitment offer
   and the ghost view) depend on chance, so that script reaches them by replaying an engine log and
   rejoining by token; everything else is clicked through live.
+
+## M3: hosting
+
+### Hosting (M3)
+
+**Decision: run the server on the host's laptop and put it behind a Cloudflare quick tunnel.**
+`pnpm start` does both. A small Node host was the alternative.
+
+Why the laptop and a tunnel:
+
+- **One game night at a time.** The server holds one room in memory and appends to a file on disk.
+  A hosted box buys nothing the laptop does not have, and costs an account, a deploy pipeline and a
+  persistent disk (most cheap hosts wipe the disk on redeploy, which would defeat log replay).
+- **The laptop is already in the room** driving the TV. If its Wi-Fi is bad the castle is bad
+  anyway, so a remote host does not remove the single point of failure it is meant to remove.
+- **Zero setup for a friend group.** A quick tunnel needs no account, no domain and no DNS: one
+  binary and one command. Deploying and iterating on a remote host is slow while the rules are still
+  changing after each playtest. The server runs the code that is on the laptop.
+- **It satisfies the HTTPS need.** Wake Lock and the selfie camera work only in a secure context;
+  the tunnel terminates TLS with a real certificate, so no CA has to be installed on any phone
+  (which rules out a self-signed or `mkcert` certificate on the LAN).
+
+What it costs, and what we did about it:
+
+- **Traffic goes out to the internet and back**, even for phones in the same room. For a turn-based
+  game of short messages this adds tens of milliseconds, not seconds. The R3 reconnect budget is
+  5 s and the tests measure well under that; it still needs confirming over a real tunnel at the
+  playtest.
+- **The address changes every time the tunnel starts**, and a phone's seat token lives in
+  `localStorage`, which is per-origin. So the launcher never restarts the tunnel on its own, and
+  restarts only the server (the room comes back from its log, and phones rejoin on the same
+  address). If the tunnel itself dies, the launcher says so; the way out is to restart and rejoin,
+  or to fall back to the LAN address.
+- **QR codes must carry the public address.** The server is told its address (`PUBLIC_URL`, set by
+  the launcher) and exposes it at `/api/config`; the castle and the host phone put it in the QR code
+  even if the laptop browser was opened on `localhost`. The castle itself should still be opened on
+  the https address so it gets Wake Lock.
+- **Quick tunnels are a no-account convenience, not a service**: Cloudflare gives no uptime
+  guarantee for them. If one proves flaky on game night, the fallback is `PUBLIC_URL` plus any other
+  tunnel with a stable name (e.g. Tailscale Funnel), which the launcher supports without code
+  changes. A tunnel with a fixed hostname would also let seats survive a tunnel restart.
+- **Not verified in this build environment**: there is no `cloudflared` binary or outside network
+  here. The launcher, the restart path and the `PUBLIC_URL` plumbing are tested against a stand-in
+  `cloudflared` (`scripts/fake-cloudflared.mjs`); the first real tunnel run is part of the playtest
+  setup. The parsing depends on `cloudflared` printing its `https://….trycloudflare.com` address.
+
+Also fixed while making `pnpm start` work end to end: pnpm runs package scripts from `apps/server`,
+so the default `WEB_DIR` and `DATA_DIR` resolved there and the built web app was not found. The
+defaults are now anchored to the repository root.

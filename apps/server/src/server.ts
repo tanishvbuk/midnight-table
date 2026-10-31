@@ -12,6 +12,8 @@ export interface ServerOptions {
   port: number;
   dataDir?: string;
   webDir?: string;
+  /** Public https origin phones should use (set when running behind a tunnel). */
+  publicUrl?: string;
   scheduler?: Scheduler;
   timeScale?: number;
   botDelayMs?: [number, number];
@@ -32,7 +34,7 @@ const IDLE_ROOM_MS = 6 * 60 * 60 * 1000;
 
 export class RoomManager {
   readonly rooms = new Map<string, Room>();
-  constructor(private opts: Omit<ServerOptions, 'port' | 'webDir'>) {
+  constructor(private opts: Omit<ServerOptions, 'port' | 'webDir' | 'publicUrl'>) {
     if (opts.dataDir) {
       for (const { code, entries } of readLogs(opts.dataDir)) {
         const room = Room.restore(entries, {
@@ -101,6 +103,9 @@ export function createServer(opts: ServerOptions) {
     const url = new URL(req.url ?? '/', 'http://x');
     if (req.method === 'POST' && url.pathname === '/api/rooms') {
       return json(res, 200, { code: manager.create().code });
+    }
+    if (req.method === 'GET' && url.pathname === '/api/config') {
+      return json(res, 200, { publicUrl: opts.publicUrl ?? null });
     }
     const m = /^\/api\/rooms\/([A-Za-z]{4})$/.exec(url.pathname);
     if (req.method === 'GET' && m) {

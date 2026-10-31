@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
 import type { HostCommand, StateMessage } from '@midnight/engine';
 import { GameClient, tokenKey, type Hello, type KeyValue, type Status } from './client';
 
@@ -89,4 +89,19 @@ export function useGame(room: string, kind: 'castle' | 'player', hello: Hello = 
     act: (a) => client.current?.act(a),
     host: (cmd) => client.current?.host(cmd),
   };
+}
+
+/**
+ * The origin phones should join on. Behind a tunnel the laptop may be opened on localhost while
+ * phones need the public https address, so the server says which one to put in the QR code.
+ */
+export function usePublicOrigin(): string {
+  const [origin, setOrigin] = useState(location.origin);
+  useEffect(() => {
+    fetch('/api/config')
+      .then((r) => (r.ok ? (r.json() as Promise<{ publicUrl: string | null }>) : null))
+      .then((c) => c?.publicUrl && setOrigin(c.publicUrl))
+      .catch(() => {});
+  }, []);
+  return origin;
 }

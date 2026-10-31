@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import type { GameView, PublicPlayer } from '@midnight/engine';
-import { useGame } from '../net';
+import { useGame, usePublicOrigin } from '../net';
 import { Countdown, Notices, Portrait } from '../ui';
 
 /** Players who have already done what the current phase is waiting for. All of it is public. */
@@ -49,7 +49,8 @@ function Roster({ v }: { v: GameView }) {
 
 function Join({ code, count }: { code: string; count: number }) {
   const [qr, setQr] = useState('');
-  const url = `${location.origin}/join/${code}`;
+  const origin = usePublicOrigin();
+  const url = `${origin}/join/${code}`;
   useEffect(() => {
     void QRCode.toDataURL(url, {
       margin: 1,
@@ -62,7 +63,7 @@ function Join({ code, count }: { code: string; count: number }) {
       {qr && <img src={qr} alt="Scan to join" />}
       <div className="join-text">
         <div className="muted">Scan with your phone, or go to</div>
-        <div className="small-url">{location.host}</div>
+        <div className="small-url">{origin.replace(/^https?:\/\//, '')}</div>
         <div className="bigcode">{code}</div>
         <div className="muted">
           {count} at the table. Four or more can play; six or more is best.
