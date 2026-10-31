@@ -8,17 +8,34 @@ export function hue(name: string): number {
   return h;
 }
 
-export function Portrait({ p, size = 56 }: { p: PublicPlayer; size?: number }) {
+const isImage = (avatar: string) => avatar.startsWith('data:image/');
+
+export function Portrait({
+  p,
+  size = 56,
+  badge,
+}: {
+  p: PublicPlayer;
+  size?: number;
+  badge?: ReactNode;
+}) {
   const dead = p.fate !== 'alive';
   return (
-    <div className={`portrait ${dead ? 'dead' : ''}`} style={{ width: size, height: size }}>
-      {p.avatar ? (
-        <img src={p.avatar} alt={p.name} />
-      ) : (
-        <span style={{ background: `hsl(${hue(p.name)} 45% 32%)`, fontSize: size * 0.4 }}>
-          {p.name.slice(0, 1).toUpperCase()}
-        </span>
-      )}
+    <div className="portrait-wrap" style={{ width: size, height: size }}>
+      <div className={`portrait ${dead ? 'dead' : ''}`}>
+        {p.avatar && isImage(p.avatar) ? (
+          <img src={p.avatar} alt={p.name} />
+        ) : p.avatar ? (
+          <span className="emoji" style={{ fontSize: size * 0.56 }}>
+            {p.avatar}
+          </span>
+        ) : (
+          <span style={{ background: `hsl(${hue(p.name)} 45% 32%)`, fontSize: size * 0.4 }}>
+            {p.name.slice(0, 1).toUpperCase()}
+          </span>
+        )}
+      </div>
+      {badge && <i className="badge">{badge}</i>}
     </div>
   );
 }
@@ -32,10 +49,18 @@ export function PlayerChip({
   onClick?: () => void;
   selected?: boolean;
 }) {
-  return (
-    <button className={`chip ${selected ? 'selected' : ''}`} onClick={onClick} disabled={!onClick}>
+  const inner = (
+    <>
       <Portrait p={p} size={40} />
       <span>{p.name}</span>
+    </>
+  );
+  // Only real buttons look like buttons: a list of who is here must not look greyed out.
+  if (!onClick)
+    return <div className={`chip static ${p.fate !== 'alive' ? 'gone' : ''}`}>{inner}</div>;
+  return (
+    <button className={`chip ${selected ? 'selected' : ''}`} onClick={onClick}>
+      {inner}
     </button>
   );
 }

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
 import type { GameView, PublicPlayer, StateMessage, YouView } from '@midnight/engine';
 import { readToken, useGame, type Connection } from '../net';
-import { Countdown, Notices, Panel, PlayerChip, go } from '../ui';
+import { Countdown, Notices, Panel, PlayerChip, Portrait, go } from '../ui';
 
 type PhaseOf<K extends GameView['phase']['kind']> = Extract<GameView['phase'], { kind: K }>;
 
@@ -253,39 +253,62 @@ function RecruitOffer({ you, act }: Ctx) {
       </Panel>
     );
   return (
-    <Panel title="A dark invitation">
-      <p>The Traitors want you. Join them, and you win with them.</p>
-      {you.offer.ultimatum && <p className="error">Refuse, and you will be murdered tonight.</p>}
+    <section className="panel offer">
+      <h2>A dark invitation</h2>
+      <p className="offer-lead">The Traitors want you.</p>
+      <p>Join them, and you win with them. Tell no one, whatever you choose.</p>
+      {you.offer.ultimatum && <p className="warning">Refuse, and you will be murdered tonight.</p>}
       <div className="stack">
-        <button className="primary" onClick={() => act({ type: 'recruitReply', accept: true })}>
+        <button className="primary big" onClick={() => act({ type: 'recruitReply', accept: true })}>
           Join the Traitors
         </button>
-        <button onClick={() => act({ type: 'recruitReply', accept: false })}>Refuse</button>
+        <button className="big" onClick={() => act({ type: 'recruitReply', accept: false })}>
+          Refuse
+        </button>
       </div>
-    </Panel>
+    </section>
   );
 }
 
 function Final({ you, v }: Ctx) {
   const ph = v.phase as PhaseOf<'finalReveal'>;
-  const won =
-    ph.roles[you.id] === (ph.winner === 'traitors' ? 'traitor' : 'faithful') &&
-    (ph.payouts[you.id] ?? -1) >= 0;
+  const winnerRole = ph.winner === 'traitors' ? 'traitor' : 'faithful';
+  const myPay = ph.payouts[you.id] ?? 0;
+  const myRole = ph.roles[you.id];
+  const sideWon = myRole === winnerRole;
+  const rows = [...v.players].sort(
+    (a, b) => (ph.payouts[b.id] ?? 0) - (ph.payouts[a.id] ?? 0) || a.name.localeCompare(b.name),
+  );
   return (
-    <Panel title={ph.winner === 'traitors' ? 'The Traitors win' : 'The Faithful win'}>
-      <p>{won ? `You take ${ph.payouts[you.id]} from the pot.` : 'Better luck next time.'}</p>
-      <table className="final">
-        <tbody>
-          {v.players.map((p) => (
-            <tr key={p.id}>
-              <td>{p.name}</td>
-              <td className={`role-${ph.roles[p.id]}`}>{ph.roles[p.id]}</td>
-              <td>{ph.payouts[p.id] ?? 0}</td>
-            </tr>
+    <>
+      <section className={`panel verdict ${sideWon ? 'win' : 'lose'}`}>
+        <small>{ph.winner === 'traitors' ? 'The Traitors win' : 'The Faithful win'}</small>
+        <strong>
+          {myPay > 0 ? myPay.toLocaleString() : sideWon ? 'Your side won' : 'Not this time'}
+        </strong>
+        <p>
+          {myPay > 0
+            ? 'is your share of the pot.'
+            : sideWon
+              ? 'Only those still standing share the pot.'
+              : 'The pot went to the other side.'}
+        </p>
+      </section>
+      <Panel title="Everyone's cards">
+        <div className="board compact">
+          {rows.map((p) => (
+            <div key={p.id} className={`board-row ${(ph.payouts[p.id] ?? 0) > 0 ? 'won' : ''}`}>
+              <Portrait p={p} size={36} />
+              <div className="board-name">{p.name}</div>
+              <div className={`board-role role-${ph.roles[p.id]}`}>{ph.roles[p.id]}</div>
+              <div className="board-pay">
+                {(ph.payouts[p.id] ?? 0) > 0 ? (ph.payouts[p.id] as number).toLocaleString() : '—'}
+              </div>
+            </div>
           ))}
-        </tbody>
-      </table>
-    </Panel>
+        </div>
+      </Panel>
+    </>
   );
 }
 
@@ -307,7 +330,7 @@ function Secrets({ you, v }: { you: YouView; v: GameView }) {
           {!you.shield && !you.clues.length ? 'Nothing yet.' : ''}
         </span>
       ) : (
-        'Hold to peek at your secrets'
+        'Hold to peek'
       )}
     </button>
   );
@@ -319,6 +342,7 @@ function CardModal({ you, onClose }: { you: YouView; onClose: () => void }) {
       <div className="card">
         <small>This proves nothing.</small>
         <strong className="role-faithful">{you.card.role === 'faithful' ? 'FAITHFUL' : ''}</strong>
+        <small className="tap">Tap anywhere to close</small>
       </div>
     </div>
   );
@@ -363,14 +387,35 @@ function HostMenu({ conn, ctx, onClose }: { conn: Connection; ctx: Ctx; onClose:
   );
 }
 
+function Ghost({ you, v }: Ctx) {
+  const me = v.players.find((p) => p.id === you.id);
+  const living = v.players.filter((p) => p.fate === 'alive');
+  return (
+    <>
+      <section className="panel ghost-card">
+        {me && <Portrait p={me} size={88} />}
+        <h2>You are a ghost</h2>
+        <p className="muted">
+          {me?.fate === 'murdered' ? 'Murdered in the night.' : 'Banished from the table.'} You can
+          no longer act, and you must not help the living.
+        </p>
+      </section>
+      <Panel title={`Still at the table (${living.length})`}>
+        <div className="chips">
+          {living.map((p) => (
+            <PlayerChip key={p.id} p={p} />
+          ))}
+        </div>
+        <p className="muted">Pot: {v.pot.toLocaleString()}. Watch the castle.</p>
+      </Panel>
+    </>
+  );
+}
+
 function Body(ctx: Ctx) {
   const { v, you } = ctx;
   if (!you.alive && v.phase.kind !== 'finalReveal' && v.phase.kind !== 'lobby') {
-    return (
-      <Panel title="You are a ghost">
-        <p>You can no longer act. Watch the castle and keep the secret of what you saw.</p>
-      </Panel>
-    );
+    return <Ghost {...ctx} />;
   }
   switch (v.phase.kind) {
     case 'lobby':
@@ -472,12 +517,14 @@ export function Play({ code }: { code: string }) {
       <p className="narration small">{s.narration}</p>
       <Body {...ctx} />
       {conn.error && <p className="error">{conn.error}</p>}
-      <footer>
-        <Secrets you={you} v={s.view} />
-        <button className="ghost" onClick={() => setCard(true)}>
-          Show my card
-        </button>
-      </footer>
+      {you.alive && s.view.phase.kind !== 'lobby' && s.view.phase.kind !== 'finalReveal' && (
+        <footer>
+          <Secrets you={you} v={s.view} />
+          <button className="ghost" onClick={() => setCard(true)}>
+            Show my card
+          </button>
+        </footer>
+      )}
       {card && <CardModal you={you} onClose={() => setCard(false)} />}
       {menu && <HostMenu conn={conn} ctx={ctx} onClose={() => setMenu(false)} />}
       {s.paused && <div className="banner">Paused by the host</div>}

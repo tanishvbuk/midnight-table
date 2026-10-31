@@ -207,6 +207,29 @@ async function liveGame(rig: Rig) {
   await driveHuman(rig, code, new Set(['final', 'ghost']));
 }
 
+/** The biggest table the game allows must still fit on the castle and read on the phone. */
+async function bigTable(rig: Rig) {
+  console.log('BIG: 16 players, lobby and role reveal');
+  const { phone, castle } = rig;
+  await phone.goto(rig.base + '/');
+  await click(phone, 'button', 'Create a room');
+  await phone.waitForURL(/\/join\/[A-Z]{4}$/);
+  const code = phone.url().split('/').pop() as string;
+  await phone.getByPlaceholder('Your name').fill('Mira');
+  await click(phone, 'button', 'Take a seat');
+  await phone.waitForURL(/\/play\//);
+  await castle.goto(`${rig.base}/castle/${code}`);
+  await phone.locator('input[type=number]').fill('15');
+  await click(phone, 'button', 'Add bots');
+  await until(() => rig.room(code).state.players.length === 16, 5000, 'bots to sit');
+  await sleep(500);
+  await shoot(rig, 'b1-16-lobby');
+  await click(phone, 'button', /Start with 16/);
+  await until(() => rig.room(code).state.phase.kind === 'roleReveal', 5000, 'role reveal');
+  await sleep(2500);
+  await shoot(rig, 'b2-16-role-reveal');
+}
+
 async function seeded(
   rig: Rig,
   name: string,
@@ -282,6 +305,7 @@ async function main() {
     if (attempt > 1) console.log('no night reached; playing another live game');
     await liveGame(rigFast);
   }
+  await bigTable(rigFast);
   await fast.close();
 
   // --- SEEDED runs on the real clock
