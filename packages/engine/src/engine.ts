@@ -1,5 +1,5 @@
 import { DEFAULT_CONFIG, MAX_PLAYERS, MIN_PLAYERS, NIGHT_MS, presetFor } from './presets';
-import { QUESTION_BANK } from './questions';
+import { drawQuestions } from './questions';
 import { rngOver, type Rng } from './rng';
 import type {
   Action,
@@ -19,7 +19,7 @@ import type {
 
 const MAX_NAME = 24;
 const MAX_NOTE = 200;
-const MAX_AVATAR = 80_000;
+const MAX_AVATAR = 16;
 const MAX_NOTES_PER_NIGHT = 20;
 
 export type ConfigOverrides = Partial<Omit<Config, 'timers'>> & {
@@ -52,6 +52,7 @@ export function createGame(options: CreateGameOptions): GameState {
     recruitPending: false,
     phase: { kind: 'lobby' },
     notes: [],
+    usedQuestions: [],
     result: null,
   };
 }
@@ -300,11 +301,9 @@ function startMission(c: Ctx): void {
   const { s } = c;
   s.day++;
   for (const p of s.players) p.shield = false;
-  const questions = c.rng
-    .shuffle(QUESTION_BANK)
-    .slice(0, s.config.questionsPerMission)
-    .map((q) => structuredClone(q));
-  enter(c, { kind: 'mission', questions, answers: {} });
+  const drawn = drawQuestions(c.rng, s.usedQuestions, s.config.questionsPerMission);
+  s.usedQuestions = drawn.used;
+  enter(c, { kind: 'mission', questions: drawn.questions, answers: {} });
 }
 
 function submitAnswers(c: Ctx, actor: PlayerId, answers: (number | null)[]): void {

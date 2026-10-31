@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import {
+  AVATARS,
   apply,
   createGame,
   createRng,
@@ -154,12 +155,30 @@ export class Room {
   private seat(name: string, avatar: string | null, bot: boolean) {
     const playerId = randomBytes(4).toString('hex');
     const token = randomBytes(18).toString('hex');
-    const res = this.tryApply({ type: 'join', id: playerId, name, avatar });
+    const res = this.tryApply({
+      type: 'join',
+      id: playerId,
+      name,
+      avatar: this.freeAvatar(avatar),
+    });
     if (res) return res;
     this.addSeat(playerId, token, bot);
     this.log.append({ k: 'seat', playerId, token, bot });
     this.broadcast([]);
     return { playerId, token };
+  }
+
+  /** Avatars nobody at the table has yet. */
+  get freeAvatars(): string[] {
+    const taken = new Set(this.state.players.map((p) => p.avatar));
+    return AVATARS.filter((a) => !taken.has(a));
+  }
+
+  /** The player's choice if it is a real, unclaimed avatar; otherwise any unclaimed one. */
+  private freeAvatar(wanted: string | null): string | null {
+    const free = this.freeAvatars;
+    if (wanted && free.includes(wanted)) return wanted;
+    return free.length ? (free[Math.floor(this.botRng.next() * free.length)] ?? null) : null;
   }
 
   connectCastle(client: Client): void {

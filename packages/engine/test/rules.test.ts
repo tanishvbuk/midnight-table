@@ -156,7 +156,9 @@ describe('mission', () => {
 
   it('never sends the correct answers to anyone', () => {
     const s = mission(6);
-    expect(JSON.stringify(view(s, 'p1'))).not.toContain('correct');
+    // The answer key is the `correct` field. (A question's own wording may contain the word.)
+    expect(JSON.stringify(view(s, 'p1'))).not.toContain('"correct"');
+    expect(JSON.stringify(view(s, 'castle'))).not.toContain('"correct"');
   });
 
   it('gives the top scorer a Shield in a murder game', () => {
@@ -233,9 +235,16 @@ describe('phase loop', () => {
   });
 
   it('skips the night entirely in 4-5 player games', () => {
-    let s = tickTo(started(5), 'speech');
-    s = tick(s).state;
-    expect(s.phase.kind).toBe('mission');
+    // Day 1 ends in a random draw. If it happens to banish the only Traitor the game is over;
+    // otherwise the next thing is a mission, never a night. Try several seeds so both hold.
+    const after: string[] = [];
+    for (let seed = 1; seed <= 12; seed++) {
+      const s = tick(tickTo(started(5, seed), 'speech')).state;
+      after.push(s.phase.kind);
+    }
+    expect(after).not.toContain('night');
+    expect(after).toContain('mission');
+    for (const k of after) expect(['mission', 'finalReveal']).toContain(k);
   });
 
   it('ignores stale timeouts and unknown players', () => {

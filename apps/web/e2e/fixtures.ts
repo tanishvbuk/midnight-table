@@ -1,4 +1,5 @@
 import {
+  AVATARS,
   apply,
   createGame,
   createRng,
@@ -56,7 +57,7 @@ export function findFixture(opts: {
       return true;
     };
     ids.forEach((id, i) => {
-      play({ type: 'join', id, name: i === 0 ? 'Mira' : `Bot ${i}`, avatar: null });
+      play({ type: 'join', id, name: i === 0 ? 'Mira' : `Bot ${i}`, avatar: AVATARS[i] ?? null });
       entries.push({
         k: 'seat',
         playerId: id,

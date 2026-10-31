@@ -118,3 +118,80 @@ bots (R22) belong to the server work in M2. The simulator's bots are in `package
   for Traitors and the private journal for everyone else.
 - **Phones-only mode (R24), ghost predictions (R26) and replay (R27)** are Should/Could items and are
   not built.
+
+## Before the first playtest
+
+### Avatars: emoji, not selfies
+
+Decided: every player has an emoji avatar. Selfies are not in v1.
+
+- The join screen shows a grid of 24 emoji and starts each player on a random free one. The server
+  checks every request: a taken emoji, an unknown string, selfie data or long text is replaced with
+  a free emoji, so two players can never share one and nothing but a listed emoji can reach the
+  castle. Bots get one too. 24 is more than the 16-seat maximum, so a free one always exists.
+- Why not selfies: R4 asks for joining in under a minute, and a selfie adds a camera permission, a
+  photo payload through the WebSocket, and HEIC and orientation edge cases, all on guests' own
+  phones. An emoji is one tap and cannot fail. At a game night everyone already knows each other's
+  faces, so a portrait adds little. It also lets the camera and HTTPS question go away: the only
+  thing left that needs HTTPS is the Wake Lock.
+- The engine's avatar field is capped at 16 characters, so image data cannot be sent by mistake.
+  Selfies can come back as an M4 option if the playtest asks for them.
+- R2 now reads "a name and an emoji avatar".
+
+### Quiz bank: written for this project, in the repository
+
+Decided: the bank is original questions, authored with Claude and committed in
+`packages/engine/src/questions.ts`. About 170 questions in 8 categories (geography, science,
+history, screen and music, food, sport, words, general).
+
+- Why not an openly licensed set: Open Trivia DB and similar sets carry attribution and share-alike
+  terms, need a build or runtime import step, and are uneven in quality and wording. This is a
+  private game with no licence to honour; owning the text avoids all of that and keeps the server
+  free of network calls.
+- Why this size: a 16-player game runs up to about a dozen missions of 8 questions. A game never repeats a
+  question until the bank is spent, and the bank holds well over a game's worth, so a group can play
+  a few games in a night.
+- Authored with the right answer first, so there is no index to get wrong. The engine shuffles the
+  options every time a question is asked, which keeps the right answer in each position about 25%
+  of the time and stops anyone learning a pattern.
+- A mission takes at most 3 questions from one category, so no one topic decides it.
+- The engine remembers which questions a game has asked (`usedQuestions`) and starts over only if
+  fewer than a mission's worth remain.
+- The answer key (`correct`) never leaves the server; a test checks every view.
+- Tests also check the bank's shape: no duplicate questions or options, length limits for a phone
+  screen, no "all of the above", and every category with real depth. Adding a bad question fails CI.
+- Accuracy: questions use stable facts and avoid anything that changes (office holders, records,
+  prices). A wrong question is the one thing a friend group will argue about, so please flag any you
+  catch and they will be fixed. Group-specific questions can be an M4 item.
+
+### Reconnecting (R3)
+
+- The phone's connection logic is a framework-free `GameClient`, tested against a real server. A
+  dropped socket retries after 150 ms, then 400, 800 and 1500 ms.
+- A locked phone often keeps a socket that looks open but is dead. On unlock, a network change or a
+  restored page, the client pings and replaces the socket if nothing answers within 1.2 s. A
+  heartbeat does the same every 4 s, and sending an action starts the same 2.5 s check, so a Wi-Fi
+  blip cannot swallow a tap silently.
+- Actions tapped while offline, or sent into a dead socket, are queued (the latest of each kind,
+  at most 5, for at most 30 s) and sent once the seat is back. The server already ignores a stale
+  or repeated action, so a resend is harmless.
+- The seat is the device token, so none of this can change who a phone is. A seat the server no
+  longer knows ends in an error screen and no retry loop.
+- Measured in tests on the real clock: clean drop, a dead socket plus catching up on what was
+  missed, refresh, and the castle all return in well under the 5 s budget. In Chromium, a refresh,
+  a dropped socket and an offline blip rejoined in 57 ms, about 1.3 s and 32 ms with the page
+  unchanged. `pnpm reconnect` repeats the browser check.
+- Not covered: a quiz half answered when the page is refreshed starts again from question 1,
+  because answers are held on the phone until the last one. The mission timer still applies.
+
+### Screens
+
+- The castle screen is laid out for a 16:9 TV: a header with room code, pot and timer, a centred
+  stage with the narration and the phase's focus, and a roster that scales to fit 16 players at
+  1280x720. Seats show a tick when a player has done what the phase waits for (looked at their
+  card, answered, readied, voted). That is already public information.
+- Ghosts get their own phone screen and no "Show my card" or peek footer, since a ghost has nothing
+  to prove or hold. Phones show the footer only while a game is in progress.
+- `pnpm screens` reproduces the screenshots in `docs/screens`. Two of them (the recruitment offer
+  and the ghost view) depend on chance, so that script reaches them by replaying an engine log and
+  rejoining by token; everything else is clicked through live.

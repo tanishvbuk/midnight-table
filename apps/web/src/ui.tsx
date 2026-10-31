@@ -8,8 +8,6 @@ export function hue(name: string): number {
   return h;
 }
 
-const isImage = (avatar: string) => avatar.startsWith('data:image/');
-
 export function Portrait({
   p,
   size = 56,
@@ -23,9 +21,7 @@ export function Portrait({
   return (
     <div className="portrait-wrap" style={{ width: size, height: size }}>
       <div className={`portrait ${dead ? 'dead' : ''}`}>
-        {p.avatar && isImage(p.avatar) ? (
-          <img src={p.avatar} alt={p.name} />
-        ) : p.avatar ? (
+        {p.avatar ? (
           <span className="emoji" style={{ fontSize: size * 0.56 }}>
             {p.avatar}
           </span>
@@ -109,15 +105,4 @@ export function Panel({ title, children }: { title?: string; children: ReactNode
 export function go(path: string): void {
   history.pushState({}, '', path);
   window.dispatchEvent(new PopStateEvent('popstate'));
-}
-
-export async function resizeImage(file: File, size = 128): Promise<string> {
-  const bmp = await createImageBitmap(file);
-  const side = Math.min(bmp.width, bmp.height);
-  const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = size;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('no canvas');
-  ctx.drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, size, size);
-  return canvas.toDataURL('image/jpeg', 0.7);
 }

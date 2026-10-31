@@ -133,6 +133,8 @@ export interface GameState {
   recruitPending: boolean;
   phase: Phase;
   notes: Note[];
+  /** Indices into the question bank already asked this game, so no mission repeats one. */
+  usedQuestions: number[];
   result: GameResult | null;
 }
 

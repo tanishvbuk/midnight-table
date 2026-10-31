@@ -1,0 +1,31 @@
+/**
+ * The avatars a player can pick. Emoji, not selfies: a tap cannot fail, needs no camera or HTTPS,
+ * and everyone at the table already knows each other's faces. 24 is more than the 16-seat maximum,
+ * so a free one always exists.
+ */
+export const AVATARS: readonly string[] = [
+  '🦊',
+  '🐺',
+  '🦉',
+  '🦇',
+  '🐍',
+  '🕷️',
+  '🦂',
+  '🐙',
+  '🦅',
+  '🐻',
+  '🦁',
+  '🐯',
+  '🐸',
+  '🦄',
+  '🐲',
+  '🦋',
+  '🐝',
+  '🐢',
+  '🦈',
+  '🐧',
+  '🦔',
+  '🐀',
+  '🦚',
+  '🐈‍⬛',
+];

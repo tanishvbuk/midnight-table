@@ -1,7 +1,8 @@
 export * from './types';
 export * from './presets';
 export * from './rng';
-export { QUESTION_BANK } from './questions';
+export { QUESTION_BANK, drawQuestions, type BankQuestion, type Category } from './questions';
+export { AVATARS } from './avatars';
 export {
   apply,
   createGame,

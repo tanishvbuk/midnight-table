@@ -110,6 +110,7 @@ export function createServer(opts: ServerOptions) {
         exists: true,
         started: room.state.phase.kind !== 'lobby',
         players: room.state.players.length,
+        taken: room.state.players.flatMap((p) => (p.avatar ? [p.avatar] : [])),
       });
     }
     if (opts.webDir && req.method === 'GET') return serveStatic(opts.webDir, req, res);

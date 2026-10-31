@@ -27,11 +27,16 @@ logs, default `data/rooms`), `WEB_DIR`, `TIME_SCALE` (e.g. `0.05` to run a game 
 
 For development run `pnpm dev:server` and `pnpm dev:web` (Vite proxies `/api` and `/ws`).
 
-Selfies and the Wake Lock API need HTTPS on real devices; use a tunnel for game night (decided at M3).
+The Wake Lock API needs HTTPS on real devices; use a tunnel for game night (decided at M3).
 
 ## Checks
 
 ```bash
 pnpm lint && pnpm typecheck && pnpm test && pnpm build
 pnpm sim --games 10000 --players 4-16 --seed 1
+pnpm screens --out docs/screens/after   # Playwright walkthrough: phone and castle screenshots
+pnpm reconnect                          # Playwright check of R3 (refresh, dropped socket, offline blip)
 ```
+
+The two Playwright scripts use the Playwright that ships with the cloud image; they are not part of
+`pnpm test`.

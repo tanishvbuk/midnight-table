@@ -153,7 +153,7 @@ The priorities are Must, Should, Could and Won't. v1 is every Must and nothing e
 | ID | Area | Requirement | Priority |
 | --- | --- | --- | --- |
 | R1 | Lobby | The creator starts a room. The castle, or the creator's phone if no castle has joined, shows a QR code and a 4-letter room code. | Must |
-| R2 | Lobby | Players join with a name and an optional selfie, with no account or install. | Must |
+| R2 | Lobby | Players join with a name and an emoji avatar, with no account or install. | Must |
 | R3 | Lobby | A locked or refreshed phone rejoins as the same player within 5 seconds, using a device token. | Must |
 | R4 | Lobby | The game starts with 4 to 16 players and applies the matching preset. | Must |
 | R5 | Roles | The server deals roles at random. Press-and-hold reveal. Traitors see each other. | Must |
@@ -206,7 +206,7 @@ The priorities are Must, Should, Could and Won't. v1 is every Must and nothing e
 
 The simulator checks that the rules are correct, not that the game is balanced. Bots that vote at random can't tell you who wins real games, so balance comes from playtests.
 
-**Hosting:** develop locally. For game nights, run the server on a small Node host or on a laptop behind an HTTPS tunnel. The Wake Lock API and the selfie camera both need HTTPS. Decide which at M3.
+**Hosting:** develop locally. For game nights, run the server on a small Node host or on a laptop behind an HTTPS tunnel. The Wake Lock API needs HTTPS. Decide which at M3.
 
 **Browsers:** iOS Safari 16.4 or later (for Wake Lock), Android Chrome, and desktop Chrome, Edge and Safari.
 
@@ -242,5 +242,7 @@ Each milestone starts only once the previous one meets its exit criteria. There 
 - [ ] Is 5 minutes the right default for Round Table discussion?
 - [ ] Should roles stop being revealed on banishment once the endgame starts?
 - [ ] Is phones-only mode needed in v1 for 4 to 5 player games, where nobody may want to set up a TV?
-- [ ] Selfies or emoji avatars?
-- [ ] Where does the quiz question bank come from: written with Claude, or an openly licensed trivia set?
+- [x] Selfies or emoji avatars? **Emoji.** Auto-assigned, changeable at join, unique per table. Selfies are out of v1. See `docs/RULES-DECISIONS.md`.
+- [x] Where does the quiz question bank come from: written with Claude, or an openly licensed trivia set? **Written for this project, in the repository** (about 170 questions in 8 categories). See `docs/RULES-DECISIONS.md`.
+
+The other open questions do not block the first playtest. They stay open until M3 feedback, and the defaults in the build (5-minute discussion, roles revealed on every banishment, castle required) stand until then.

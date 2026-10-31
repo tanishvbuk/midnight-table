@@ -101,20 +101,25 @@ button.danger {
   flex-direction: column;
   gap: 8px;
 }
-.selfie {
+.avatar-pick {
   display: grid;
-  place-items: center;
-  height: 140px;
-  border: 1px dashed var(--line);
-  border-radius: 14px;
-  color: var(--muted);
-  cursor: pointer;
-  overflow: hidden;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
 }
-.selfie img {
-  height: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
+.avatar {
+  padding: 0;
+  min-height: 52px;
+  font-size: 1.7rem;
+  line-height: 1;
+  border-radius: 12px;
+}
+.avatar.selected {
+  border-color: var(--gold);
+  background: #2a2238;
+  box-shadow: 0 0 0 1px var(--gold);
+}
+.avatar:disabled {
+  opacity: 0.2;
 }
 
 .phone {
