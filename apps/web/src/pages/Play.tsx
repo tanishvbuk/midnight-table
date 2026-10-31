@@ -40,6 +40,15 @@ function Lobby({ conn, s, v }: Ctx) {
       </Panel>
       {s.isHost ? (
         <Panel title="You are the host">
+          <button
+            className="primary"
+            disabled={v.players.length < 4}
+            onClick={() => conn.act({ type: 'start' })}
+          >
+            {v.players.length < 4
+              ? `Need ${4 - v.players.length} more`
+              : `Start with ${v.players.length}`}
+          </button>
           {qr && <img className="qr" src={qr} alt="Join code" />}
           <div className="row">
             <input
@@ -51,15 +60,6 @@ function Lobby({ conn, s, v }: Ctx) {
             />
             <button onClick={() => conn.host({ cmd: 'addBots', count: bots })}>Add bots</button>
           </div>
-          <button
-            className="primary"
-            disabled={v.players.length < 4}
-            onClick={() => conn.act({ type: 'start' })}
-          >
-            {v.players.length < 4
-              ? `Need ${4 - v.players.length} more`
-              : `Start with ${v.players.length}`}
-          </button>
         </Panel>
       ) : (
         <Waiting text="Waiting for the host to start…" />

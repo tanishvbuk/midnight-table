@@ -252,8 +252,10 @@ export class Room {
       }
       case 'addBots': {
         if (!inLobby) return 'Bots can only join in the lobby.';
-        const used = new Set(this.state.players.map((p) => p.name));
-        const free = BOT_NAMES.filter((n) => !used.has(`${n} (bot)`));
+        const used = new Set(this.state.players.map((p) => p.name.toLowerCase()));
+        const free = BOT_NAMES.filter(
+          (n) => !used.has(n.toLowerCase()) && !used.has(`${n} (bot)`.toLowerCase()),
+        );
         for (let i = 0; i < Math.min(16, Math.max(0, Math.floor(command.count))); i++) {
           const name = free[i];
           if (!name) break;
