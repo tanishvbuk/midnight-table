@@ -14,6 +14,7 @@
     "test": "vitest run",
     "sim": "tsx packages/sim/src/cli.ts",
     "screens": "tsx apps/web/e2e/screens.ts",
+    "reconnect": "tsx apps/web/e2e/reconnect.ts",
     "build": "pnpm --filter @midnight/web build",
     "start": "pnpm build && pnpm --filter @midnight/server start",
     "dev:server": "pnpm --filter @midnight/server dev",
