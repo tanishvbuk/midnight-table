@@ -29,3 +29,12 @@ Any host that runs Node 22+ and terminates TLS (Fly.io, Render, a VPS behind Cad
 1. `pnpm lint && pnpm typecheck && pnpm test && pnpm build`
 2. Start with `TIME_SCALE=0.05` once and add bots to confirm a full game finishes.
 3. Open the HTTPS URL on one real phone; check the selfie prompt and that a locked phone rejoins.
+
+## Bot-game smoke test against a live server
+
+```bash
+TIME_SCALE=0.03 BOT_DELAY_MS=100,300 PORT=8790 pnpm --filter @midnight/server start &
+SERVER=localhost:8790 SIZES=4,6,12 pnpm botgames
+```
+
+Last run: 4, 6 and 12 players all reached the final reveal (28s, 54s and 91s at that time scale).

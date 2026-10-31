@@ -12,6 +12,7 @@
     "format": "prettier --write .",
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "vitest run",
+    "botgames": "node scripts/botgames.cjs",
     "sim": "tsx packages/sim/src/cli.ts",
     "build": "pnpm --filter @midnight/web build",
     "start": "pnpm build && pnpm --filter @midnight/server start",
