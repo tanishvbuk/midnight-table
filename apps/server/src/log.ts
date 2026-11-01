@@ -1,4 +1,11 @@
-import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import type { Action, ConfigOverrides, PlayerId } from '@midnight/engine';
 
@@ -6,6 +13,7 @@ export type LogEntry =
   | { k: 'create'; code: string; seed: number; config?: ConfigOverrides; ts: number }
   | { k: 'seat'; playerId: PlayerId; token: string; bot: boolean }
   | { k: 'autopilot'; playerId: PlayerId }
+  | { k: 'pause'; paused: boolean }
   | { k: 'act'; action: Action };
 
 export interface RoomLog {
@@ -31,19 +39,30 @@ export function openLog(dir: string, code: string): FileLog {
   return new FileLog(logPath(dir, code));
 }
 
+/**
+ * Reads every room log. A crash can leave a torn last line, and appending after it would glue the
+ * next entry onto the fragment and lose everything after it on the following replay. So when a log
+ * has an unreadable tail, it is rewritten as just its valid prefix before anything appends to it.
+ */
 export function readLogs(dir: string): { code: string; entries: LogEntry[] }[] {
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
     .filter((f) => f.endsWith('.jsonl'))
     .map((f) => {
-      const lines = readFileSync(join(dir, f), 'utf8').split('\n').filter(Boolean);
+      const path = join(dir, f);
+      const text = readFileSync(path, 'utf8');
       const entries: LogEntry[] = [];
-      for (const line of lines) {
+      let clean = text === '' || text.endsWith('\n');
+      for (const line of text.split('\n').filter(Boolean)) {
         try {
           entries.push(JSON.parse(line) as LogEntry);
         } catch {
-          break; // a torn last line from a crash: replay up to here
+          clean = false;
+          break; // a torn line from a crash: replay up to here
         }
+      }
+      if (!clean) {
+        writeFileSync(path, entries.map((e) => JSON.stringify(e) + '\n').join(''));
       }
       return { code: f.replace(/\.jsonl$/, ''), entries };
     });

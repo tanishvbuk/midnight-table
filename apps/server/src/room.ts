@@ -121,7 +121,9 @@ export class Room {
       log: nullLog,
     });
     room.replaying = true;
+    let paused = false;
     for (const e of entries.slice(1)) {
+      if (e.k === 'pause') paused = e.paused;
       if (e.k === 'seat') room.addSeat(e.playerId, e.token, e.bot);
       else if (e.k === 'autopilot') {
         const seat = room.seats.get(e.playerId);
@@ -133,8 +135,12 @@ export class Room {
     }
     room.replaying = false;
     room.log = deps.log ?? nullLog;
-    room.armTimer();
-    room.scheduleBots();
+    // A host pause survives a crash: the table stays frozen until the host resumes it.
+    room.paused = paused;
+    if (!paused) {
+      room.armTimer();
+      room.scheduleBots();
+    }
     return room;
   }
 
@@ -228,6 +234,7 @@ export class Room {
         this.remainingMs =
           this.deadlineAt === null ? null : Math.max(0, this.deadlineAt - this.sched.now());
         this.paused = true;
+        this.log.append({ k: 'pause', paused: true });
         this.timer?.cancel();
         this.timer = null;
         this.deadlineAt = null;
@@ -235,6 +242,7 @@ export class Room {
       case 'resume':
         if (!this.paused) return 'Not paused.';
         this.paused = false;
+        this.log.append({ k: 'pause', paused: false });
         this.armTimer(this.remainingMs ?? undefined);
         this.scheduleBots();
         return this.announce('The host resumed the game.');

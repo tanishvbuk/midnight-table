@@ -244,3 +244,27 @@ What it costs, and what we did about it:
 Also fixed while making `pnpm start` work end to end: pnpm runs package scripts from `apps/server`,
 so the default `WEB_DIR` and `DATA_DIR` resolved there and the built web app was not found. The
 defaults are now anchored to the repository root.
+
+### Rehearsal and crash recovery (M3)
+
+- `pnpm rehearsal` runs the real launcher (`scripts/start.ts`, stand-in tunnel) as a separate
+  process, plays a 6-player game with one human in Chromium, `kill -9`s the server during a vote,
+  and checks the phone rejoins by token and the game finishes. It then runs `pnpm reconnect` and
+  `pnpm screens`. One passing run: server serving again 3.0 s after the kill, seat back
+  immediately, game finished on day 3.
+- `apps/server/test/restart.test.ts` checks the same at server level: the restored room gives the
+  phone the identical private view, rejects unknown tokens, keeps the castle free of roles, finishes
+  the game, and survives a second restart.
+- That test found two bugs, both fixed. (1) A host **pause** was not logged, so a crash un-paused the
+  table; pause and resume are now log entries. (2) After a crash left a torn last line, the
+  restarted server appended onto the fragment and the next replay dropped everything after it
+  (a finished game came back at "mission"). `readLogs` now rewrites a log to its valid prefix.
+- Not proven: behaviour over a real Cloudflare tunnel, and Wake Lock on real phones.
+
+### Quiz bank review (M3)
+
+All 169 questions were read. None is factually wrong. One wording fix: "Which empire built the
+Colosseum?" had the option "The Greek", which is not an empire; it is now "The Persian". Not
+changed, but worth knowing: 18 questions' text gives away another question's answer if both land in
+one mission (e.g. "capital of Egypt" and "the pyramids of Giza are in which country?"). A picker
+rule that keeps linked questions apart is a better fix than rewording.

@@ -15,6 +15,7 @@
     "sim": "tsx packages/sim/src/cli.ts",
     "screens": "tsx apps/web/e2e/screens.ts",
     "reconnect": "tsx apps/web/e2e/reconnect.ts",
+    "rehearsal": "tsx apps/web/e2e/rehearsal.ts && pnpm reconnect && pnpm screens --out data/rehearsal-screens",
     "build": "pnpm --filter @midnight/web build",
     "start": "pnpm build && tsx scripts/start.ts",
     "start:local": "pnpm build && TUNNEL=none tsx scripts/start.ts",
