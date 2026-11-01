@@ -34,6 +34,52 @@ describe('quiz bank', () => {
   });
 });
 
+describe('answer giveaways', () => {
+  const strip = (s: string) => s.toLowerCase().replace(/^(the|a|an) /, '');
+  const share = (a: (typeof QUESTION_BANK)[number], b: (typeof QUESTION_BANK)[number]) =>
+    (a.topics ?? []).some((t) => (b.topics ?? []).includes(t));
+
+  it("no question's text contains another's answer unless they share a topic tag", () => {
+    const uncovered: string[] = [];
+    QUESTION_BANK.forEach((a, i) =>
+      QUESTION_BANK.forEach((b, j) => {
+        const ans = strip(b.answer);
+        if (i === j || ans.length < 4 || /^[\d,]+$/.test(ans)) return;
+        const esc = ans.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        if (new RegExp(`\\b${esc}`).test(a.text.toLowerCase()) && !share(a, b))
+          uncovered.push(`"${a.text}" gives away "${b.text}" (${b.answer})`);
+      }),
+    );
+    expect(uncovered).toEqual([]);
+  });
+
+  it('every topic ties together at least two questions', () => {
+    const count = new Map<string, number>();
+    for (const b of QUESTION_BANK)
+      for (const t of b.topics ?? []) count.set(t, (count.get(t) ?? 0) + 1);
+    expect(count.size).toBeGreaterThan(0);
+    for (const [t, n] of count) expect(n, t).toBeGreaterThanOrEqual(2);
+  });
+
+  it('a mission never holds two questions with a shared topic', () => {
+    for (let seed = 1; seed <= 300; seed++) {
+      const rng = createRng(seed);
+      let used: number[] = [];
+      for (let m = 0; m < 12; m++) {
+        const drawn = drawQuestions(rng, used, 8);
+        const picked = drawn.used.slice(used.length);
+        for (let x = 0; x < picked.length; x++)
+          for (let y = x + 1; y < picked.length; y++)
+            expect(
+              share(QUESTION_BANK[picked[x] as number]!, QUESTION_BANK[picked[y] as number]!),
+              `seed ${seed} mission ${m}`,
+            ).toBe(false);
+        used = drawn.used;
+      }
+    }
+  });
+});
+
 describe('drawQuestions', () => {
   it('returns the asked number, each with its answer at the index marked correct', () => {
     const { questions, used } = drawQuestions(createRng(1), [], 8);

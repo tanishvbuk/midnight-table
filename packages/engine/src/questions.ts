@@ -10,6 +10,11 @@ export interface BankQuestion {
   text: string;
   answer: string;
   wrong: readonly [string, string, string];
+  /**
+   * Topics that other questions' text or answers mention. Two questions that share a topic are never
+   * put in the same mission, because one would hand the other its answer.
+   */
+  topics?: readonly string[];
 }
 
 const q = (
@@ -23,7 +28,7 @@ const q = (
  * The quiz bank, written for this project (see docs/RULES-DECISIONS.md). Original wording, no
  * licence to carry, no network at runtime. Mixed on purpose: nobody should win every mission.
  */
-export const QUESTION_BANK: readonly BankQuestion[] = [
+const RAW_BANK: readonly BankQuestion[] = [
   q('geography', 'What is the capital of Australia?', 'Canberra', 'Sydney', 'Melbourne', 'Perth'),
   q(
     'geography',
@@ -902,6 +907,70 @@ export const QUESTION_BANK: readonly BankQuestion[] = [
   q('general', 'Which animal is a Dalmatian?', 'A dog', 'A horse', 'A cat', 'A rabbit'),
 ];
 
+/**
+ * Topic tags, by the exact text of each question they cover. Resolved when the module loads, which
+ * throws if a text was edited without updating this table. The bank test recomputes every giveaway
+ * from the question text and fails if one is not covered by a shared tag, so this stays complete.
+ */
+const TOPICS: Record<string, readonly string[]> = {
+  australia: [
+    'What is the capital of Australia?',
+    'The Great Barrier Reef lies off the coast of which country?',
+  ],
+  japan: [
+    'What is the capital of Japan?',
+    'Which Japanese dish is vinegared rice with fish?',
+    'In which country did sumo wrestling originate?',
+    'What is the currency of Japan?',
+  ],
+  sushi: [
+    'Which Japanese dish is vinegared rice with fish?',
+    'What is the green paste served with sushi?',
+  ],
+  brazil: ['What is the capital of Brazil?', 'Which country hosted the 2016 Summer Olympics?'],
+  egypt: [
+    'What is the capital of Egypt?',
+    'The pyramids of Giza are in which country?',
+    'Which Egyptian queen allied with Mark Antony?',
+  ],
+  queen: [
+    'Which queen ruled Britain for 63 years, until 1901?',
+    'Which Egyptian queen allied with Mark Antony?',
+    'Which singer is known as the Queen of Pop?',
+    'Which band sang "Bohemian Rhapsody"?',
+  ],
+  mammal: [
+    'What is the largest mammal on Earth?',
+    'What type of animal is a dolphin?',
+    'Which is the only mammal capable of true flight?',
+  ],
+  oxygen: [
+    'Which blood cells carry oxygen around the body?',
+    'Which gas do humans need to breathe in to live?',
+  ],
+  heart: ['How many hearts does an octopus have?', 'Which organ pumps blood around the body?'],
+  saffron: [
+    'Which Spanish dish is made with rice, saffron and often seafood?',
+    'Which spice is the most expensive by weight?',
+  ],
+  tennis: ['In tennis, what is a score of zero called?', 'Which sport is played at Wimbledon?'],
+  france: [
+    'What colour jersey does the leader of the Tour de France wear?',
+    'Which country gave the Statue of Liberty to the USA?',
+  ],
+};
+
+export const QUESTION_BANK: readonly BankQuestion[] = (() => {
+  const tags = new Map<string, string[]>();
+  for (const [topic, texts] of Object.entries(TOPICS)) {
+    for (const text of texts) tags.set(text, [...(tags.get(text) ?? []), topic]);
+  }
+  const known = new Set(RAW_BANK.map((b) => b.text));
+  for (const text of tags.keys())
+    if (!known.has(text)) throw new Error(`TOPICS names unknown question: ${text}`);
+  return RAW_BANK.map((b) => (tags.has(b.text) ? { ...b, topics: tags.get(b.text) } : b));
+})();
+
 /** No category may take more than this many seats in a single mission. */
 const MAX_PER_CATEGORY = 3;
 
@@ -922,17 +991,30 @@ export function drawQuestions(
   }
   const shuffled = rng.shuffle(pool);
   const perCategory = new Map<Category, number>();
+  const topicsTaken = new Set<string>();
   const picked: number[] = [];
-  for (const i of shuffled) {
-    const cat = (QUESTION_BANK[i] as BankQuestion).category;
-    if ((perCategory.get(cat) ?? 0) >= MAX_PER_CATEGORY) continue;
-    perCategory.set(cat, (perCategory.get(cat) ?? 0) + 1);
+  const clashes = (i: number) =>
+    (QUESTION_BANK[i] as BankQuestion).topics?.some((t) => topicsTaken.has(t)) ?? false;
+  const take = (i: number) => {
+    const b = QUESTION_BANK[i] as BankQuestion;
+    perCategory.set(b.category, (perCategory.get(b.category) ?? 0) + 1);
+    for (const t of b.topics ?? []) topicsTaken.add(t);
     picked.push(i);
-    if (picked.length === count) break;
+  };
+  // Spread across categories without giving answers away; then relax the category cap; and only
+  // if the pool is nearly spent, relax the topic rule too, so a mission can always be filled.
+  for (const i of shuffled) {
+    if (picked.length >= count) break;
+    const cat = (QUESTION_BANK[i] as BankQuestion).category;
+    if ((perCategory.get(cat) ?? 0) < MAX_PER_CATEGORY && !clashes(i)) take(i);
   }
   for (const i of shuffled) {
     if (picked.length >= count) break;
-    if (!picked.includes(i)) picked.push(i);
+    if (!picked.includes(i) && !clashes(i)) take(i);
+  }
+  for (const i of shuffled) {
+    if (picked.length >= count) break;
+    if (!picked.includes(i)) take(i);
   }
   const questions = picked.map((i) => {
     const b = QUESTION_BANK[i] as BankQuestion;

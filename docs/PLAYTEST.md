@@ -4,6 +4,12 @@ One page for game night. You are also a player, so everything here is something 
 game or _after_ it. Success criteria are from [`SPEC.md`](SPEC.md#objectives-and-success-criteria):
 M3 passes after **3 games in a row** meeting them. Keep one scorecard per game (bottom of this page).
 
+## 0. Once, by hand (days before)
+
+- [ ] Install `cloudflared` on the laptop and run `cloudflared --version` ([README, "Game night"](../README.md#game-night)).
+- [ ] Print this page, one scorecard per game (3), and a pen. Decide who asks the debrief questions.
+- [ ] Run the dry run in section 1 on the real tunnel at least once before the night.
+
 ## 1. Setup (30 minutes before guests)
 
 - [ ] Laptop plugged in, sleep off, on the home Wi-Fi, TV connected. One-time: `cloudflared` is installed.

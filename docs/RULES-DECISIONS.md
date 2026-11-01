@@ -265,6 +265,10 @@ defaults are now anchored to the repository root.
 
 All 169 questions were read. None is factually wrong. One wording fix: "Which empire built the
 Colosseum?" had the option "The Greek", which is not an empire; it is now "The Persian". Not
-changed, but worth knowing: 18 questions' text gives away another question's answer if both land in
-one mission (e.g. "capital of Egypt" and "the pyramids of Giza are in which country?"). A picker
-rule that keeps linked questions apart is a better fix than rewording.
+changed in the bank itself: 18 questions' text gave away another question's answer if both landed in
+one mission (e.g. "capital of Egypt" and "the pyramids of Giza are in which country?"). Fixed in the
+picker instead of by rewording: questions carry topic tags (`TOPICS` in `questions.ts`) and a mission
+never holds two questions that share one. A test recomputes every giveaway from the question text and
+fails if a pair is not covered by a shared tag, so new questions cannot reintroduce the problem
+unnoticed. If a mission cannot be filled that way (the bank is nearly spent) the rule is relaxed last,
+so a long game never stalls.
