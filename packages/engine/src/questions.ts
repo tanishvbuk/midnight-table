@@ -382,7 +382,7 @@ export const QUESTION_BANK: readonly BankQuestion[] = [
     'history',
     'Which empire built the Colosseum?',
     'The Roman Empire',
-    'The Greek',
+    'The Persian',
     'The Ottoman',
     'The Byzantine',
   ),
