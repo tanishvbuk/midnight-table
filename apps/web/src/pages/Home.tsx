@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { go } from '../ui';
+import { HoodedFigure, Ornament } from '../scenes';
 
 export function Home() {
   const [code, setCode] = useState('');
@@ -25,22 +26,24 @@ export function Home() {
   };
 
   return (
-    <main className="page center">
+    <main className="page center paper-page">
+      <HoodedFigure size={110} />
       <h1 className="title">Midnight Table</h1>
-      <p className="muted">A game of trust and betrayal for 4–16 friends. Everyone plays.</p>
+      <Ornament />
+      <p className="tagline">Trust no one. Four to sixteen friends. One of you is lying.</p>
       <button className="primary" onClick={create} disabled={busy}>
-        Create a room
+        Open the castle doors
       </button>
       <div className="row">
         <input
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 4))}
-          placeholder="ROOM CODE"
+          placeholder="CASTLE CODE"
           maxLength={4}
           autoCapitalize="characters"
         />
         <button onClick={join} disabled={code.length !== 4}>
-          Join
+          Enter
         </button>
       </div>
       {error && <p className="error">{error}</p>}

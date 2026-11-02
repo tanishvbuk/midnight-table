@@ -1,12 +1,20 @@
+/* Palette: burgundy and egg-yolk gold from the castle interiors, cloak green, candlelit black. */
 :root {
-  --bg: #0d0b14;
-  --panel: #1a1626;
-  --line: #2e2842;
-  --text: #f3ecd9;
-  --muted: #9b93b0;
-  --gold: #d9b45a;
-  --red: #c4455a;
-  --green: #5fae7a;
+  --bg: #0a0507;
+  --panel: #1a0a10;
+  --panel-2: #240e16;
+  --line: #4a2630;
+  --burgundy: #6e1423;
+  --blood: #b3283a;
+  --text: #efe2c4;
+  --muted: #a8949a;
+  --gold: #c8a24a;
+  --gold-hi: #e6c471;
+  --green: #5f9c78;
+  --cloak: #1c3b2b;
+  --display: 'Cinzel Decorative', 'Cinzel', Georgia, serif;
+  --head: 'Cinzel', Georgia, serif;
+  --body: 'Cormorant Garamond', Georgia, serif;
   color-scheme: dark;
 }
 * {
@@ -14,56 +22,83 @@
 }
 body {
   margin: 0;
-  background: var(--bg);
+  background:
+    radial-gradient(120% 60% at 50% 0%, rgba(110, 20, 35, 0.35), transparent 60%),
+    radial-gradient(90% 50% at 50% 100%, rgba(28, 59, 43, 0.4), transparent 60%), var(--bg);
+  background-attachment: fixed;
   color: var(--text);
-  font:
-    16px/1.4 system-ui,
-    -apple-system,
-    'Segoe UI',
-    sans-serif;
+  font: 500 19px/1.35 var(--body);
   -webkit-tap-highlight-color: transparent;
 }
 h1,
 h2,
 h3 {
   margin: 0 0 8px;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: var(--head);
+  font-weight: 600;
 }
 button,
 input {
-  font: inherit;
+  font: 600 1rem var(--head);
+  letter-spacing: 0.04em;
   color: var(--text);
-  background: var(--panel);
+  background: linear-gradient(var(--panel-2), var(--panel));
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 4px;
   padding: 12px 14px;
-  min-height: 44px;
+  min-height: 46px;
+}
+input {
+  font-family: var(--body);
+  font-weight: 600;
+  font-size: 1.15rem;
+  letter-spacing: 0.02em;
+}
+input::placeholder {
+  color: #735c63;
+}
+input:focus,
+button:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
 }
 button {
   cursor: pointer;
+  text-transform: uppercase;
+  font-size: 0.82rem;
 }
 button:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: default;
 }
 button.primary {
-  background: var(--gold);
-  color: #1a1408;
+  background: linear-gradient(var(--blood), var(--burgundy));
+  color: #fbeed0;
   border-color: var(--gold);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.5),
+    0 0 18px rgba(179, 40, 58, 0.25);
   font-weight: 700;
 }
 button.ghost {
   background: transparent;
   border-color: transparent;
   color: var(--muted);
+  text-transform: none;
+  font-family: var(--body);
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 button.danger {
-  border-color: var(--red);
-  color: var(--red);
+  border-color: var(--blood);
+  color: #ff8a98;
 }
 .page {
+  position: relative;
+  z-index: 1;
   min-height: 100dvh;
-  padding: 24px 16px;
+  padding: 24px 18px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -76,8 +111,20 @@ button.danger {
   text-align: center;
 }
 .title {
-  font-size: 2.4rem;
-  color: var(--gold);
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 2.5rem;
+  line-height: 1.05;
+  color: var(--gold-hi);
+  text-shadow:
+    0 0 28px rgba(200, 162, 74, 0.35),
+    0 2px 0 #000;
+  letter-spacing: 0.02em;
+}
+.tagline {
+  font-style: italic;
+  font-size: 1.35rem;
+  color: var(--muted);
 }
 .muted {
   color: var(--muted);
@@ -86,7 +133,7 @@ button.danger {
   text-align: center;
 }
 .error {
-  color: var(--red);
+  color: #ff8a98;
 }
 .row {
   display: flex;
@@ -105,8 +152,8 @@ button.danger {
   display: grid;
   place-items: center;
   height: 140px;
-  border: 1px dashed var(--line);
-  border-radius: 14px;
+  border: 1px dashed var(--gold);
+  border-radius: 4px;
   color: var(--muted);
   cursor: pointer;
   overflow: hidden;
@@ -117,9 +164,36 @@ button.danger {
   object-fit: cover;
 }
 
+.ornament {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+  margin: 4px 0;
+}
+.ornament span {
+  height: 1px;
+  width: 80px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+.dagger {
+  display: inline-block;
+}
+.hood {
+  align-self: center;
+  filter: drop-shadow(0 0 24px rgba(60, 140, 100, 0.3));
+}
+
+/* Page backdrops: the whole app lives inside the castle's night. */
+.paper {
+  min-height: 100dvh;
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgba(110, 20, 35, 0.35), transparent 60%),
+    radial-gradient(90% 60% at 50% 110%, rgba(28, 59, 43, 0.35), transparent 60%), var(--bg);
+}
 .phone {
   min-height: 100dvh;
-  padding: 12px 16px 96px;
+  padding: 12px 16px 84px;
   max-width: 520px;
   margin: 0 auto;
   display: flex;
@@ -131,6 +205,8 @@ button.danger {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  font-family: var(--head);
+  letter-spacing: 0.06em;
 }
 .phone footer {
   position: fixed;
@@ -140,48 +216,73 @@ button.danger {
   display: flex;
   gap: 8px;
   justify-content: space-between;
-  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
-  background: linear-gradient(transparent, var(--bg) 30%);
+  padding: 8px 16px calc(8px + env(safe-area-inset-bottom));
+  background: linear-gradient(transparent, var(--bg) 45%);
 }
 .phone footer button {
   flex: 1;
+  min-height: 40px;
+  padding: 6px;
 }
 .panel {
-  background: var(--panel);
+  background: linear-gradient(180deg, rgba(36, 14, 22, 0.92), rgba(20, 8, 13, 0.95));
   border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 14px;
+  border-top: 2px solid var(--gold);
+  border-radius: 4px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
 }
 .panel h2 {
-  color: var(--gold);
-  font-size: 1.1rem;
+  color: var(--gold-hi);
+  font-size: 1.05rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
-.narration {
-  font-size: clamp(1.4rem, 3.4vw, 2.6rem);
-  line-height: 1.25;
-  margin: 8px 0;
+.panel h3 {
+  font-size: 1.35rem;
+  line-height: 1.2;
 }
-.narration.small {
-  font-size: 1rem;
-  color: var(--muted);
-  font-family: inherit;
-  font-style: italic;
+.panel p {
   margin: 0;
 }
+.narration {
+  font-family: var(--head);
+  font-weight: 600;
+  font-size: clamp(1.5rem, 3.2vw, 2.7rem);
+  line-height: 1.25;
+  margin: 8px 0;
+  color: var(--text);
+  text-shadow: 0 2px 18px #000;
+}
+.narration.small {
+  font-family: var(--body);
+  font-size: 1.15rem;
+  color: var(--muted);
+  font-style: italic;
+  margin: 0;
+  text-shadow: none;
+}
 .timer {
+  font-family: var(--head);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  font-size: 1.2rem;
-  color: var(--gold);
+  font-size: 1.3rem;
+  color: var(--gold-hi);
 }
 .timer.urgent {
-  color: var(--red);
+  color: #ff5a6e;
+  animation: pulse 1s infinite;
 }
 .timer.paused {
   color: var(--muted);
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.55;
+  }
 }
 .chips {
   display: flex;
@@ -192,18 +293,24 @@ button.danger {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px 6px 6px;
+  padding: 5px 14px 5px 5px;
   border-radius: 999px;
+  text-transform: none;
+  font-family: var(--body);
+  font-size: 1.1rem;
+  letter-spacing: 0;
 }
 .chip.selected {
-  border-color: var(--gold);
-  background: #2a2238;
+  border-color: var(--gold-hi);
+  background: linear-gradient(var(--burgundy), #3a0a14);
+  box-shadow: 0 0 14px rgba(200, 162, 74, 0.35);
 }
 .portrait {
   border-radius: 50%;
   overflow: hidden;
   flex: none;
-  border: 2px solid var(--line);
+  border: 2px solid var(--gold);
+  box-shadow: 0 0 0 2px #000;
 }
 .portrait img,
 .portrait span {
@@ -212,13 +319,15 @@ button.danger {
   display: grid;
   place-items: center;
   object-fit: cover;
+  font-family: var(--head);
   font-weight: 700;
 }
 .portrait.dead {
-  filter: grayscale(1) brightness(0.55);
+  filter: grayscale(1) brightness(0.5);
+  border-color: #444;
 }
 .hold {
-  min-height: 130px;
+  min-height: 150px;
   font-size: 1.1rem;
   display: flex;
   flex-direction: column;
@@ -228,17 +337,20 @@ button.danger {
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
+  background: radial-gradient(circle at 50% 40%, #2c0f18, #12060a);
+  border: 1px solid var(--gold);
 }
 .hold.open {
-  background: #261c2f;
-  border-color: var(--gold);
+  background: radial-gradient(circle at 50% 40%, #3b1220, #12060a);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.7);
 }
 .hold strong {
+  font-family: var(--display);
   font-size: 2rem;
   letter-spacing: 0.1em;
 }
 .role-traitor {
-  color: var(--red);
+  color: #ff5a6e;
 }
 .role-faithful {
   color: var(--green);
@@ -254,29 +366,31 @@ button.danger {
   gap: 4px;
 }
 .notes li {
-  background: #120f1c;
+  background: rgba(0, 0, 0, 0.35);
   padding: 6px 10px;
-  border-radius: 8px;
+  border-left: 2px solid var(--gold);
 }
 .qr {
-  width: 160px;
-  height: 160px;
-  border-radius: 8px;
+  width: 150px;
+  height: 150px;
+  border-radius: 4px;
   align-self: center;
+  border: 4px solid #efe2c4;
 }
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.86);
   display: grid;
   place-items: center;
   padding: 16px;
   z-index: 10;
 }
 .card {
-  background: #f3ecd9;
-  color: #1a1408;
-  border-radius: 18px;
+  background: #efe2c4;
+  color: #1a0a10;
+  border: 6px double #6e1423;
+  border-radius: 4px;
   padding: 40px 48px;
   display: flex;
   flex-direction: column;
@@ -284,12 +398,14 @@ button.danger {
   gap: 8px;
 }
 .card strong {
+  font-family: var(--display);
   font-size: 2.2rem;
   letter-spacing: 0.12em;
 }
 .sheet {
   background: var(--panel);
-  border-radius: 16px;
+  border: 1px solid var(--gold);
+  border-radius: 4px;
   padding: 18px;
   width: min(420px, 100%);
   max-height: 90dvh;
@@ -302,8 +418,10 @@ button.danger {
   right: 0;
   text-align: center;
   padding: 6px;
-  background: var(--red);
+  background: var(--burgundy);
+  font-family: var(--head);
   font-weight: 700;
+  letter-spacing: 0.1em;
   z-index: 20;
 }
 .notices {
@@ -319,10 +437,11 @@ button.danger {
   z-index: 15;
 }
 .notice {
-  background: var(--gold);
-  color: #1a1408;
+  background: #efe2c4;
+  color: #1a0a10;
   padding: 8px 14px;
-  border-radius: 10px;
+  border: 1px solid var(--burgundy);
+  font-family: var(--head);
   font-weight: 600;
 }
 .final {
@@ -335,54 +454,152 @@ button.danger {
   text-align: left;
 }
 .peek {
-  font-size: 0.8rem;
+  font-size: 0.9rem;
 }
 
+/* ---------- Castle screen ---------- */
 .castle {
+  position: relative;
   min-height: 100dvh;
-  padding: 28px 40px;
+  padding: 26px 44px 30px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  transition: background 1s;
+  gap: 14px;
+  overflow: hidden;
 }
-.castle.night {
-  background: #05040a;
+.castle > *:not(.backdrop) {
+  position: relative;
+  z-index: 1;
+}
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  transition: filter 1.5s;
+}
+.backdrop svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.backdrop.is-dim svg {
+  filter: brightness(0.45) saturate(0.8);
+}
+.backdrop.is-night svg {
+  filter: brightness(0.8) hue-rotate(8deg);
+}
+.vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 90% at 50% 40%, transparent 40%, rgba(0, 0, 0, 0.85)),
+    linear-gradient(rgba(0, 0, 0, 0.55), transparent 25%, transparent 55%, rgba(0, 0, 0, 0.7));
+}
+.star {
+  animation: twinkle 4s infinite ease-in-out;
+}
+@keyframes twinkle {
+  50% {
+    opacity: 0.25;
+  }
+}
+.win {
+  animation: flicker 3.5s infinite ease-in-out;
+}
+@keyframes flicker {
+  0%,
+  100% {
+    filter: none;
+  }
+  45% {
+    opacity: 0.55;
+  }
+  60% {
+    opacity: 1;
+  }
+}
+.flag {
+  transform-origin: 1067px 308px;
+  animation: wave 3s infinite ease-in-out;
+}
+@keyframes wave {
+  50% {
+    transform: skewY(6deg) scaleX(0.92);
+  }
+}
+.mist {
+  animation: drift 40s infinite alternate ease-in-out;
+}
+.mist.m2 {
+  animation-duration: 55s;
+  animation-direction: alternate-reverse;
+}
+.mist.m3 {
+  animation-duration: 70s;
+}
+@keyframes drift {
+  to {
+    transform: translateX(160px);
+  }
 }
 .castle header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 1.4rem;
+  font-family: var(--head);
+  letter-spacing: 0.14em;
+  font-size: 1.15rem;
+  text-transform: uppercase;
 }
-.castle .code,
-.castle .pot {
+.castle .code {
   color: var(--gold);
   font-weight: 700;
+}
+.castle .pot {
+  font-weight: 700;
+  color: var(--gold-hi);
+  border: 1px solid var(--gold);
+  padding: 4px 18px;
+  background: rgba(10, 5, 7, 0.65);
+}
+.pot b {
+  font-family: var(--display);
+  font-size: 1.5rem;
+  margin-left: 8px;
+}
+.castle .narration {
+  max-width: 1100px;
 }
 .join-box {
   display: flex;
   gap: 32px;
   align-items: center;
+  align-self: flex-start;
+  background: rgba(10, 5, 7, 0.7);
+  border: 1px solid var(--gold);
+  padding: 18px 28px 18px 18px;
 }
 .join-box img {
-  width: 260px;
-  border-radius: 12px;
+  width: 230px;
+  border-radius: 2px;
 }
 .bigcode {
+  font-family: var(--display);
   font-size: 5rem;
   letter-spacing: 0.2em;
-  font-weight: 800;
-  color: var(--gold);
+  font-weight: 900;
+  color: var(--gold-hi);
+  text-shadow: 0 0 30px rgba(200, 162, 74, 0.4);
 }
 .small-url {
-  font-size: 1.4rem;
+  font-size: 1.6rem;
 }
 .roster {
   display: flex;
   flex-wrap: wrap;
   gap: 18px;
   margin-top: auto;
+  padding: 14px 0 0;
 }
 .seat {
   display: flex;
@@ -391,20 +608,32 @@ button.danger {
   gap: 4px;
   width: 100px;
 }
+.seat-name,
+.rt-name {
+  font-family: var(--head);
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  text-shadow: 0 1px 6px #000;
+}
 .seat.murdered .seat-name,
 .seat.banished .seat-name {
   text-decoration: line-through;
   color: var(--muted);
 }
 .seat-tag {
-  font-size: 0.75rem;
+  font-family: var(--head);
+  font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   color: var(--muted);
 }
 .status {
-  font-size: 1.6rem;
-  color: var(--muted);
+  font-size: 1.7rem;
+  font-style: italic;
+  color: var(--text);
+  text-shadow: 0 2px 12px #000;
+  margin: 0;
 }
 .reveal {
   font-size: 1.6rem;
@@ -419,4 +648,113 @@ button.danger {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+/* Round Table scene */
+.hall {
+  background:
+    radial-gradient(70% 70% at 50% 55%, rgba(120, 50, 20, 0.35), transparent 70%),
+    radial-gradient(120% 100% at 50% 50%, #1a0a0c, #050203);
+}
+.hall-stage {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+}
+.rt {
+  position: relative;
+  width: min(66vh, 58vw);
+  aspect-ratio: 1;
+}
+.rt-table {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 20px 30px rgba(0, 0, 0, 0.7));
+}
+.flame {
+  animation: lick 0.9s infinite alternate ease-in-out;
+  transform-origin: 50px 47px;
+}
+@keyframes lick {
+  to {
+    transform: scale(1.25, 0.9) translateX(0.3px);
+    opacity: 0.85;
+  }
+}
+.arrow {
+  stroke-dasharray: 2 1.4;
+  animation: dash 0.8s linear infinite;
+}
+@keyframes dash {
+  to {
+    stroke-dashoffset: -3.4;
+  }
+}
+.rt-seat {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: transform 0.4s;
+}
+.rt-seat.is-dead {
+  opacity: 0.55;
+}
+.rt-seat.is-dead .rt-name {
+  text-decoration: line-through;
+}
+.rt-seat.is-ready .portrait {
+  border-color: var(--green);
+}
+.rt-seat.is-speaking,
+.rt-seat.is-target {
+  transform: translate(-50%, -50%) scale(1.25);
+  z-index: 2;
+}
+.rt-seat.is-speaking .portrait,
+.rt-seat.is-target .portrait {
+  border-color: #ff5a6e;
+  box-shadow:
+    0 0 0 2px #000,
+    0 0 30px rgba(255, 90, 110, 0.7);
+}
+.rt-seat.is-voter .portrait {
+  border-color: var(--gold-hi);
+  box-shadow:
+    0 0 0 2px #000,
+    0 0 24px rgba(230, 196, 113, 0.7);
+}
+.rt-tally {
+  display: flex;
+  gap: 2px;
+  position: absolute;
+  top: -22px;
+}
+.hall-note {
+  text-align: center;
+}
+.hall-note .status {
+  font-size: 1.5rem;
+}
+.final-card {
+  align-self: flex-start;
+  background: rgba(10, 5, 7, 0.78);
+  border: 1px solid var(--gold);
+  padding: 8px 20px;
+  font-size: 1.3rem;
+  max-width: 640px;
+}
+.final-card .final td {
+  padding: 8px 12px;
+}
+.legend {
+  font-family: var(--head);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }

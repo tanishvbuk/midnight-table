@@ -4,6 +4,14 @@ import { Castle } from './pages/Castle';
 import { Home } from './pages/Home';
 import { Join } from './pages/Join';
 import { Play } from './pages/Play';
+import '@fontsource/cinzel/500.css';
+import '@fontsource/cinzel/600.css';
+import '@fontsource/cinzel/700.css';
+import '@fontsource/cinzel-decorative/700.css';
+import '@fontsource/cinzel-decorative/900.css';
+import '@fontsource/cormorant-garamond/500.css';
+import '@fontsource/cormorant-garamond/600.css';
+import '@fontsource/cormorant-garamond/500-italic.css';
 import './styles.css';
 
 function usePath(): string {

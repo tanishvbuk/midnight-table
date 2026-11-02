@@ -31,7 +31,7 @@ function Lobby({ conn, s, v }: Ctx) {
   }, [s.isHost, code]);
   return (
     <>
-      <Panel title={`Room ${code}`}>
+      <Panel title={`Castle ${code}`}>
         <div className="chips">
           {v.players.map((p) => (
             <PlayerChip key={p.id} p={p} />
@@ -39,7 +39,16 @@ function Lobby({ conn, s, v }: Ctx) {
         </div>
       </Panel>
       {s.isHost ? (
-        <Panel title="You are the host">
+        <Panel title="You hold the keys">
+          <button
+            className="primary"
+            disabled={v.players.length < 4}
+            onClick={() => conn.act({ type: 'start' })}
+          >
+            {v.players.length < 4
+              ? `Need ${4 - v.players.length} more`
+              : `Begin the game (${v.players.length})`}
+          </button>
           {qr && <img className="qr" src={qr} alt="Join code" />}
           <div className="row">
             <input
@@ -51,15 +60,6 @@ function Lobby({ conn, s, v }: Ctx) {
             />
             <button onClick={() => conn.host({ cmd: 'addBots', count: bots })}>Add bots</button>
           </div>
-          <button
-            className="primary"
-            disabled={v.players.length < 4}
-            onClick={() => conn.act({ type: 'start' })}
-          >
-            {v.players.length < 4
-              ? `Need ${4 - v.players.length} more`
-              : `Start with ${v.players.length}`}
-          </button>
         </Panel>
       ) : (
         <Waiting text="Waiting for the host to start…" />
@@ -75,7 +75,7 @@ function Reveal({ you, act, v }: Ctx) {
     ids.filter((i) => i !== you.id).map((i) => v.players.find((p) => p.id === i)?.name);
   return (
     <>
-      <Panel title="Your role">
+      <Panel title="Your fate">
         <button
           className={`hold ${held ? 'open' : ''}`}
           onPointerDown={() => setHeld(true)}
@@ -91,7 +91,7 @@ function Reveal({ you, act, v }: Ctx) {
               {you.team && <small>With: {names(you.team).join(', ') || 'no one else'}</small>}
             </>
           ) : (
-            'Press and hold to reveal'
+            'Press and hold to learn your fate'
           )}
         </button>
       </Panel>
@@ -99,7 +99,7 @@ function Reveal({ you, act, v }: Ctx) {
         <Waiting text="Waiting for the others…" />
       ) : (
         <button className="primary" onClick={() => act({ type: 'ackRole' })}>
-          I have seen it
+          I know my fate
         </button>
       )}
     </>
@@ -205,7 +205,7 @@ function Night({ you, act, others }: Ctx) {
     : you.journal.map((m) => ({ key: m.text + m.night, text: m.text, author: '' }));
   return (
     <>
-      <Panel title="Night">
+      <Panel title="Midnight">
         <p>Choose a player.</p>
         <div className="chips">
           {others.map((p) => (
@@ -218,7 +218,7 @@ function Night({ you, act, others }: Ctx) {
           ))}
         </div>
       </Panel>
-      <Panel title="Night notes">
+      <Panel title="Whispers">
         <ul className="notes">
           {notes.map((n, i) => (
             <li key={n.key + i}>{n.text}</li>
@@ -254,7 +254,7 @@ function RecruitOffer({ you, act }: Ctx) {
     );
   return (
     <Panel title="A dark invitation">
-      <p>The Traitors want you. Join them, and you win with them.</p>
+      <p>The Traitors have chosen you. Join them, and you win with them.</p>
       {you.offer.ultimatum && <p className="error">Refuse, and you will be murdered tonight.</p>}
       <div className="stack">
         <button className="primary" onClick={() => act({ type: 'recruitReply', accept: true })}>
@@ -367,7 +367,7 @@ function Body(ctx: Ctx) {
   const { v, you } = ctx;
   if (!you.alive && v.phase.kind !== 'finalReveal' && v.phase.kind !== 'lobby') {
     return (
-      <Panel title="You are a ghost">
+      <Panel title="The castle has claimed you">
         <p>You can no longer act. Watch the castle and keep the secret of what you saw.</p>
       </Panel>
     );

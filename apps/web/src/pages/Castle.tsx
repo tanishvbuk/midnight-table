@@ -3,6 +3,7 @@ import QRCode from 'qrcode';
 import type { GameView, PublicPlayer } from '@midnight/engine';
 import { useGame } from '../net';
 import { Countdown, Notices, Portrait } from '../ui';
+import { CastleBackdrop, RoundTable, type TableMark } from '../scenes';
 
 function Roster({ v }: { v: GameView }) {
   return (
@@ -28,7 +29,7 @@ function Join({ code }: { code: string }) {
     void QRCode.toDataURL(url, {
       margin: 1,
       width: 280,
-      color: { dark: '#0d0b14', light: '#f3ecd9' },
+      color: { dark: '#0a0507', light: '#efe2c4' },
     }).then(setQr);
   }, [url]);
   return (
@@ -77,24 +78,9 @@ function phasePanel(v: GameView, byId: Map<string, PublicPlayer>) {
         </p>
       );
     case 'voteReveal':
-      return (
-        <ol className="reveal">
-          {ph.revealed.map((r) => (
-            <li key={r.voter}>
-              <b>{name(r.voter)}</b> → {name(r.target)}
-            </li>
-          ))}
-        </ol>
-      );
-    case 'speech': {
-      const p = byId.get(ph.player);
-      return p ? (
-        <div className="spotlight">
-          <Portrait p={p} size={160} />
-          <h2>{p.name}</h2>
-        </div>
-      ) : null;
-    }
+      return null;
+    case 'speech':
+      return null;
     case 'breakfast':
       return (
         <div className="arrivals">
@@ -106,21 +92,47 @@ function phasePanel(v: GameView, byId: Map<string, PublicPlayer>) {
       );
     case 'finalReveal':
       return (
-        <table className="final">
-          <tbody>
-            {v.players.map((p) => (
-              <tr key={p.id}>
-                <td>{p.name}</td>
-                <td className={`role-${ph.roles[p.id]}`}>{ph.roles[p.id]}</td>
-                <td>{p.fate}</td>
-                <td>{ph.payouts[p.id] ?? 0}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="final-card">
+          <table className="final">
+            <tbody>
+              {v.players.map((p) => (
+                <tr key={p.id}>
+                  <td>{p.name}</td>
+                  <td className={`role-${ph.roles[p.id]}`}>{ph.roles[p.id]}</td>
+                  <td>{p.fate}</td>
+                  <td>{ph.payouts[p.id] ?? 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       );
     default:
       return null;
+  }
+}
+
+const TABLE_PHASES = new Set(['discussion', 'voting', 'voteReveal', 'speech', 'endgameVote']);
+
+function tableMarks(v: GameView): TableMark {
+  const ph = v.phase;
+  switch (ph.kind) {
+    case 'discussion':
+      return { ready: ph.ready };
+    case 'voting':
+      return { ready: ph.submitted };
+    case 'endgameVote':
+      return { ready: ph.submitted };
+    case 'speech':
+      return { speaker: ph.player };
+    case 'voteReveal': {
+      const tally: Record<string, number> = {};
+      for (const r of ph.revealed) if (r.target) tally[r.target] = (tally[r.target] ?? 0) + 1;
+      const last = ph.revealed.at(-1);
+      return { tally, arrow: last ? { from: last.voter, to: last.target } : undefined };
+    }
+    default:
+      return {};
   }
 }
 
@@ -157,17 +169,32 @@ export function Castle({ code }: { code: string }) {
   const v = s.view;
   const byId = new Map(v.players.map((p) => [p.id, p]));
   const night = v.phase.kind === 'night' || v.phase.kind === 'recruitOffer';
+  const atTable = TABLE_PHASES.has(v.phase.kind);
   return (
-    <main className={`castle ${night ? 'night' : ''}`}>
+    <main className={`castle ${atTable ? 'hall' : ''}`}>
+      {!atTable && <CastleBackdrop night={night} dim={v.phase.kind === 'finalReveal'} />}
       <header>
         <div className="code">Room {code}</div>
-        <div className="pot">Pot {v.pot}</div>
+        <div className="pot">
+          The pot <b>{v.pot}</b>
+        </div>
         <Countdown conn={conn} />
       </header>
       <h1 className="narration">{s.narration}</h1>
       {v.phase.kind === 'lobby' && <Join code={code} />}
-      {phasePanel(v, byId)}
-      <Roster v={v} />
+      {atTable ? (
+        <>
+          <div className="hall-stage">
+            <RoundTable players={v.players} marks={tableMarks(v)} />
+          </div>
+          <div className="hall-note">{phasePanel(v, byId)}</div>
+        </>
+      ) : (
+        <>
+          {phasePanel(v, byId)}
+          <Roster v={v} />
+        </>
+      )}
       {conn.status !== 'open' && <div className="banner">Reconnecting…</div>}
       <Notices conn={conn} />
     </main>

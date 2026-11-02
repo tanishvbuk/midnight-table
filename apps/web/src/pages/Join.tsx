@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { readToken } from '../net';
 import { go, resizeImage } from '../ui';
+import { Ornament } from '../scenes';
 
 export function Join({ code }: { code: string }) {
   const [name, setName] = useState('');
@@ -30,15 +31,20 @@ export function Join({ code }: { code: string }) {
 
   return (
     <main className="page center">
-      <h1 className="title">Room {code}</h1>
+      <h1 className="title">Castle {code}</h1>
+      <Ornament />
       <input
         value={name}
         onChange={(e) => setName(e.target.value.slice(0, 20))}
-        placeholder="Your name"
+        placeholder="Your name, Faithful"
         autoFocus
       />
       <label className="selfie">
-        {avatar ? <img src={avatar} alt="Your portrait" /> : <span>Add a selfie (optional)</span>}
+        {avatar ? (
+          <img src={avatar} alt="Your portrait" />
+        ) : (
+          <span>Add your portrait (optional)</span>
+        )}
         <input
           type="file"
           accept="image/*"
@@ -48,7 +54,7 @@ export function Join({ code }: { code: string }) {
         />
       </label>
       <button className="primary" onClick={enter} disabled={name.trim().length === 0}>
-        Take a seat
+        Take your seat
       </button>
       <a
         href={`/castle/${code}`}
