@@ -25,6 +25,10 @@ from phones (or add bots from the host's phone). Environment variables: `PORT`, 
 logs, default `data/rooms`), `WEB_DIR`, `TIME_SCALE` (e.g. `0.05` to run a game in minutes) and
 `BOT_DELAY_MS` (`lo,hi`).
 
+On the castle screen, click "Music" (or press M) to start the generated soundtrack; browsers block
+autoplay, so it needs one click per session. It is synthesised live with Web Audio, with no audio
+files.
+
 For development run `pnpm dev:server` and `pnpm dev:web` (Vite proxies `/api` and `/ws`).
 
 Selfies and the Wake Lock API need HTTPS on real devices; use a tunnel for game night (decided at M3).

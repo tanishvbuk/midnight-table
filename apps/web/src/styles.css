@@ -758,3 +758,19 @@ button.danger {
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
+
+.head-right {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+button.sound {
+  font-family: var(--head);
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  background: rgba(10, 5, 7, 0.6);
+}

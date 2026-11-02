@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import type { GameView, PublicPlayer } from '@midnight/engine';
 import { useGame } from '../net';
 import { Countdown, Notices, Portrait } from '../ui';
+import { Soundtrack, moodFor } from '../music';
 import { CastleBackdrop, RoundTable, type TableMark } from '../scenes';
 
 function Roster({ v }: { v: GameView }) {
@@ -139,6 +140,33 @@ function tableMarks(v: GameView): TableMark {
 export function Castle({ code }: { code: string }) {
   const conn = useGame(code, 'castle');
   const s = conn.state;
+  const track = useRef<Soundtrack | null>(null);
+  const [sound, setSound] = useState(false);
+  const kind = s?.view.phase.kind;
+  const murdered =
+    s?.view.phase.kind === 'breakfast' && s.view.phase.announced ? s.view.phase.victim : null;
+  const toggleSound = () => {
+    track.current ??= new Soundtrack();
+    if (track.current.playing) track.current.stop();
+    else track.current.start();
+    setSound(track.current.playing);
+  };
+  useEffect(() => {
+    if (kind) track.current?.setMood(moodFor(kind));
+  }, [kind, sound]);
+  useEffect(() => {
+    if (murdered) track.current?.stinger('murder');
+  }, [murdered]);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'm' || e.key === 'M') toggleSound();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      track.current?.stop();
+    };
+  }, []);
   useEffect(() => {
     let lock: WakeLockSentinel | null = null;
     const ask = () =>
@@ -178,7 +206,12 @@ export function Castle({ code }: { code: string }) {
         <div className="pot">
           The pot <b>{v.pot}</b>
         </div>
-        <Countdown conn={conn} />
+        <div className="head-right">
+          <button className="ghost sound" onClick={toggleSound}>
+            {sound ? '♪ Music on' : '♪ Music off (M)'}
+          </button>
+          <Countdown conn={conn} />
+        </div>
       </header>
       <h1 className="narration">{s.narration}</h1>
       {v.phase.kind === 'lobby' && <Join code={code} />}
