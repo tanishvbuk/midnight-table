@@ -1,3 +1,7 @@
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { request } from 'node:http';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import WebSocket from 'ws';
 import type { ClientMessage, ServerMessage, StateMessage } from '@midnight/engine';
@@ -114,5 +118,62 @@ describe('websocket server', () => {
     const info = (await (await fetch(`${http}/api/rooms/${code}`)).json()) as { players: number };
     expect(info.players).toBe(1);
     expect((await fetch(`${http}/api/rooms/ZZZZ`)).status).toBe(404);
+  });
+
+  it('survives malformed websocket messages', async () => {
+    const { ws, code, http } = await boot();
+    const host = new Socket(ws);
+    await host.ready();
+    // Before hello: values JSON.parse accepts but that are not message objects.
+    for (const raw of ['null', '0', '"x"', '[]', 'true']) host.ws.send(raw);
+    host.send({ t: 'hello', room: code, kind: 'player', name: 'Host' });
+    await host.until(() => host.welcome !== null && host.state !== null);
+    // After hello, as the host: missing or junk payloads.
+    for (const raw of [
+      '{"t":"host"}',
+      '{"t":"host","command":null}',
+      '{"t":"host","command":"pause"}',
+      '{"t":"host","command":{"cmd":"dropPlayer"}}',
+      '{"t":"host","command":{"cmd":"addBots","count":"9"}}',
+      '{"t":"act","action":null}',
+      '{"t":"act","action":"start"}',
+    ]) {
+      host.ws.send(raw);
+    }
+    await host.until(() => host.errors.length >= 12);
+    // Still serving: the room answers and a valid command still works.
+    expect((await fetch(`${http}/api/rooms/${code}`)).status).toBe(200);
+    host.send({ t: 'host', command: { cmd: 'addBots', count: 2 } });
+    await host.until(() => host.state?.view.players.length === 3);
+  });
+});
+
+describe('static files', () => {
+  function rawGet(port: number, path: string): Promise<number> {
+    // fetch() would normalise the path; send it exactly as an attacker could.
+    return new Promise((resolve, reject) => {
+      const req = request({ host: '127.0.0.1', port, path, method: 'GET' }, (res) => {
+        res.resume();
+        resolve(res.statusCode ?? 0);
+      });
+      req.on('error', reject);
+      req.end();
+    });
+  }
+
+  it('rejects malformed URLs and sibling directories without crashing', async () => {
+    const base = mkdtempSync(join(tmpdir(), 'mt-static-'));
+    const webDir = join(base, 'dist');
+    mkdirSync(webDir);
+    mkdirSync(join(base, 'dist-old'));
+    writeFileSync(join(webDir, 'index.html'), 'app');
+    writeFileSync(join(base, 'dist-old', 'secret.txt'), 'secret');
+    const server = createServer({ port: 0, webDir });
+    const port = await server.listen();
+    open.push(server);
+
+    expect(await rawGet(port, '/%E0%A4%A')).toBe(400);
+    expect(await rawGet(port, '/..%2fdist-old/secret.txt')).toBe(403);
+    expect(await rawGet(port, '/index.html')).toBe(200);
   });
 });

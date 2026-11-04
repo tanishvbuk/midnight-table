@@ -1,9 +1,10 @@
 import { randomInt } from 'node:crypto';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer as createHttp, type IncomingMessage, type ServerResponse } from 'node:http';
-import { extname, join, normalize } from 'node:path';
-import type { ClientMessage, ConfigOverrides, HostCommand, ServerMessage } from '@midnight/engine';
+import { extname, join, normalize, sep } from 'node:path';
+import type { ClientMessage, ConfigOverrides, ServerMessage } from '@midnight/engine';
 import { WebSocketServer, type WebSocket } from 'ws';
+import { parseHostCommand } from './actions';
 import { openLog, readLogs } from './log';
 import { Room, type Client } from './room';
 import { realScheduler, type Scheduler } from './scheduler';
@@ -87,8 +88,18 @@ function json(res: ServerResponse, status: number, body: unknown): void {
 
 function serveStatic(webDir: string, req: IncomingMessage, res: ServerResponse): void {
   const url = new URL(req.url ?? '/', 'http://x');
-  let file = normalize(join(webDir, decodeURIComponent(url.pathname)));
-  if (!file.startsWith(webDir)) return void json(res, 403, { error: 'forbidden' });
+  let pathname: string;
+  try {
+    pathname = decodeURIComponent(url.pathname);
+  } catch {
+    return void json(res, 400, { error: 'bad path' });
+  }
+  const root = normalize(webDir);
+  let file = normalize(join(root, pathname));
+  // Compare with a trailing separator, or "/web/dist" would also let "/web/dist-old" through.
+  if (file !== root && !file.startsWith(root.endsWith(sep) ? root : root + sep)) {
+    return void json(res, 403, { error: 'forbidden' });
+  }
   if (!existsSync(file) || statSync(file).isDirectory()) file = join(webDir, 'index.html');
   if (!existsSync(file)) return void json(res, 404, { error: 'not found' });
   res.writeHead(200, { 'content-type': MIME[extname(file)] ?? 'application/octet-stream' });
@@ -98,6 +109,16 @@ function serveStatic(webDir: string, req: IncomingMessage, res: ServerResponse):
 export function createServer(opts: ServerOptions) {
   const manager = new RoomManager(opts);
   const http = createHttp((req, res) => {
+    try {
+      handleHttp(req, res);
+    } catch (err) {
+      // One bad request must never take the whole server (and every room) down.
+      console.error('http handler failed', err);
+      if (!res.headersSent) json(res, 500, { error: 'internal error' });
+      else res.end();
+    }
+  });
+  function handleHttp(req: IncomingMessage, res: ServerResponse): void {
     const url = new URL(req.url ?? '/', 'http://x');
     if (req.method === 'POST' && url.pathname === '/api/rooms') {
       return json(res, 200, { code: manager.create().code });
@@ -114,7 +135,7 @@ export function createServer(opts: ServerOptions) {
     }
     if (opts.webDir && req.method === 'GET') return serveStatic(opts.webDir, req, res);
     json(res, 404, { error: 'not found' });
-  });
+  }
 
   const wss = new WebSocketServer({ server: http, path: '/ws', maxPayload: 200_000 });
   wss.on('connection', (ws: WebSocket) => {
@@ -130,13 +151,27 @@ export function createServer(opts: ServerOptions) {
     const refill = setInterval(() => (burst = 0), 1000);
 
     ws.on('message', (data) => {
-      if (++burst > 30) return client.send({ t: 'error', message: 'Slow down.' });
-      let msg: ClientMessage;
       try {
-        msg = JSON.parse(data.toString()) as ClientMessage;
+        handleMessage(data.toString());
+      } catch (err) {
+        // A throw here would be an uncaught exception and kill the process for every room.
+        console.error('ws handler failed', err);
+        client.send({ t: 'error', message: 'Bad message.' });
+      }
+    });
+    const handleMessage = (text: string): void => {
+      if (++burst > 30) return client.send({ t: 'error', message: 'Slow down.' });
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(text);
       } catch {
         return client.send({ t: 'error', message: 'Bad message.' });
       }
+      // JSON.parse happily returns null, numbers, strings and arrays.
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        return client.send({ t: 'error', message: 'Bad message.' });
+      }
+      const msg = parsed as ClientMessage;
       if (msg.t === 'ping') return client.send({ t: 'pong' });
       if (msg.t === 'hello') {
         if (room) return;
@@ -182,10 +217,19 @@ export function createServer(opts: ServerOptions) {
       }
       if (!room || !playerId) return client.send({ t: 'error', message: 'Say hello first.' });
       let err: string | null = null;
-      if (msg.t === 'act') err = room.act(playerId, (msg.action ?? {}) as Record<string, unknown>);
-      else if (msg.t === 'host') err = room.host(playerId, msg.command as HostCommand);
+      if (msg.t === 'act') {
+        const action: unknown = msg.action;
+        if (typeof action !== 'object' || action === null) {
+          return client.send({ t: 'error', message: 'Bad action.' });
+        }
+        err = room.act(playerId, action as Record<string, unknown>);
+      } else if (msg.t === 'host') {
+        const command = parseHostCommand(msg.command);
+        if (!command) return client.send({ t: 'error', message: 'Bad host command.' });
+        err = room.host(playerId, command);
+      }
       if (err) client.send({ t: 'error', message: err });
-    });
+    };
     ws.on('close', () => {
       clearInterval(refill);
       room?.disconnect(client);

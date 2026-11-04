@@ -1,4 +1,4 @@
-import type { Action, PlayerId } from '@midnight/engine';
+import type { Action, HostCommand, PlayerId } from '@midnight/engine';
 
 const isStr = (v: unknown, max = 100): v is string => typeof v === 'string' && v.length <= max;
 
@@ -34,6 +34,28 @@ export function parsePlayerAction(raw: Record<string, unknown>, actor: PlayerId)
     case 'recruitReply':
       if (typeof raw.accept !== 'boolean') return null;
       return { type: 'recruitReply', actor, accept: raw.accept };
+    default:
+      return null;
+  }
+}
+
+/** Turns an untrusted client message into a host command, or null if it isn't one. */
+export function parseHostCommand(raw: unknown): HostCommand | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const c = raw as Record<string, unknown>;
+  switch (c.cmd) {
+    case 'pause':
+    case 'resume':
+    case 'addTime':
+    case 'rerunVote':
+    case 'endGame':
+      return { cmd: c.cmd };
+    case 'dropPlayer':
+      if (!isStr(c.target)) return null;
+      return { cmd: 'dropPlayer', target: c.target };
+    case 'addBots':
+      if (typeof c.count !== 'number' || !Number.isFinite(c.count)) return null;
+      return { cmd: 'addBots', count: c.count };
     default:
       return null;
   }
